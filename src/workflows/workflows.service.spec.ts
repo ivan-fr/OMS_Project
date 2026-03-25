@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkflowsService } from './workflows.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { BusinessEventTypesEnum } from 'src/events/business-event.dto';
 
 describe('WorkflowsService', () => {
   let service: WorkflowsService;
@@ -43,15 +44,17 @@ describe('WorkflowsService', () => {
       data: {
         name: 'Workflow test',
         isActive: false,
+        condition: undefined,
         userId: 'user-1',
         // US05: trigger fixé côté serveur.
-        trigger: 'manual.trigger',
+        trigger: BusinessEventTypesEnum.MANUAL_TRIGGER,
       },
       select: {
         id: true,
         name: true,
         isActive: true,
         trigger: true,
+        condition: true,
         userId: true,
         createdAt: true,
       },
@@ -64,7 +67,7 @@ describe('WorkflowsService', () => {
       id: 'wf2',
       name: 'Workflow default active',
       isActive: true,
-      trigger: 'manual.trigger',
+      trigger: BusinessEventTypesEnum.MANUAL_TRIGGER,
       userId: 'user-2',
       createdAt: new Date(),
     });
@@ -78,7 +81,7 @@ describe('WorkflowsService', () => {
         data: expect.objectContaining({
           isActive: true,
           userId: 'user-2',
-          trigger: 'manual.trigger',
+          trigger: BusinessEventTypesEnum.MANUAL_TRIGGER,
         }),
       }),
     );

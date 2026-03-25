@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { BUSINESS_EVENT_TYPES} from '../../events/business-event.dto';
+import type { BusinessEventType } from '../../events/business-event.dto';
 
 export class CreateWorkflowDto {
   @ApiProperty({ example: 'Workflow onboarding client' })
@@ -11,4 +13,14 @@ export class CreateWorkflowDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiProperty({ example: 'manual.trigger', required: false })
+  @IsOptional()
+  @IsIn(BUSINESS_EVENT_TYPES)
+  trigger?: BusinessEventType;
+
+  @ApiProperty({ example: 'order.amount > 100', required: false })
+  @IsOptional()
+  @IsString()
+  condition?: string;
 }

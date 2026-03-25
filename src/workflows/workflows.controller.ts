@@ -1,6 +1,7 @@
 import {
 	Body,
 	Controller,
+	Get,
 	HttpCode,
 	HttpStatus,
 	Post,
@@ -34,5 +35,29 @@ export class WorkflowsController {
 	) {
 		// Le workflow appartient toujours à l'utilisateur connecté.
 		return this.workflowsService.create(req.user.sub, dto);
+	}
+
+	@Get()
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Lister workflows par utilisateur' })
+	findAll(@Req() req: { user: { sub: string } }) {
+		return this.workflowsService.findAll(req.user.sub);
+	}
+
+	@Get('active')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Lister workflows actifs par utilisateur' })
+	findActive(@Req() req: { user: { sub: string } }) {
+		return this.workflowsService.findActive(req.user.sub);
+	}
+
+	@Get('triggers')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Lister les triggers autorisés' })
+	getTriggers() {
+		return this.workflowsService.getAllowedTriggers();
 	}
 }
