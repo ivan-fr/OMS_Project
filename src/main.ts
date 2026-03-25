@@ -19,6 +19,7 @@ async function bootstrap() {
     .setTitle('OMS API')
     .setDescription('Documentation API OMS')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, swaggerDocument);
