@@ -7,7 +7,13 @@ import {
 	Post,
 	Req,
 	UseGuards,
+	BadRequestException,
+	NotFoundException,
+	Param,
+	Body,
+	Patch
 } from '@nestjs/common';
+
 import {
 	ApiBearerAuth,
 	ApiBody,
@@ -18,10 +24,14 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { WorkflowsService } from './workflows.service';
 
+import { Workflow } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { UpdateTriggerDto } from './dto/updata-trigger.dto';
+
 @ApiTags('Workflows')
 @Controller('workflows')
 export class WorkflowsController {
-	constructor(private readonly workflowsService: WorkflowsService) {}
+	constructor(private readonly prisma: PrismaService,private readonly workflowsService: WorkflowsService) {}
 
 	@Post()
 	@UseGuards(JwtAuthGuard)
@@ -60,4 +70,18 @@ export class WorkflowsController {
 	getTriggers() {
 		return this.workflowsService.getAllowedTriggers();
 	}
+
+    @Patch(':id/trigger')
+    async triggerworkflow(@Param('id') id: string, @Body() updateTriggerValueToUpdate: UpdateTriggerDto) {
+        // Implementation Ajout d'un trigger à un workflow
+        const workflow = await this.workflowsService.getWorkflowById(id);
+
+        if (!workflow || workflow === null) throw new NotFoundException();
+        if (!workflow.isActive) {
+            throw new BadRequestException("Workflow is not active");
+        }else{
+            const updatedWorkflow = await this.workflowsService.updateWorkflow(id, {trigger:updateTriggerValueToUpdate.trigger});
+            return updatedWorkflow;
+        }
+    }
 }

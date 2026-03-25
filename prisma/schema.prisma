@@ -39,7 +39,7 @@ model Order {
 model Workflow {
   id         String              @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
   name       String  /// Nom du workflow (ex: "Notification inscription admin")
-  trigger    String  /// Événement déclencheur: user.registered, order.created, order.paid, manual.trigger
+  trigger    TriggerType  /// Événement déclencheur: user.registered, order.created, order.paid, manual.trigger
   isActive   Boolean             @default(true)  /// Un workflow inactif ne s'exécute jamais
   condition  String?  /// Condition optionnelle (ex: "order.amount > 100" pour filtrer les exécutions)
   userId     String              @db.ObjectId  /// Propriétaire du workflow
@@ -113,5 +113,13 @@ model AppLog {
   message   String  /// Message du log
   context   Json?  /// Contexte JSON avec détails (trigger, user, payload, etc.)
   createdAt DateTime @default(now())  /// Horodatage du log
+}
+
+//Enumeration pour les types de Triggers
+enum TriggerType {
+  USER_REGISTERED
+  ORDER_CREATED
+  MANUAL_TRIGGER
+  ORDER_PAID
 }
 
