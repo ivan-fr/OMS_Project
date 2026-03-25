@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 type CreateUserInput = {
@@ -8,14 +9,17 @@ type CreateUserInput = {
 
 @Injectable()
 export class UsersService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly eventEmitter: EventEmitter2,
+	) {}
 
 	findByEmail(email: string) {
 		return this.prisma.user.findUnique({ where: { email } });
 	}
 
-	create(input: CreateUserInput) {
-		return this.prisma.user.create({
+	async create(input: CreateUserInput) {
+		const user = await this.prisma.user.create({
 			data: {
 				email: input.email,
 				passwordHash: input.passwordHash,
@@ -26,5 +30,15 @@ export class UsersService {
 				createdAt: true,
 			},
 		});
+
+		this.eventEmitter.emit('user.registered', {
+			eventType: 'user.registered',
+			data: { userId: user.id, email: user.email },
+		});
+
+		return user;
 	}
 }
+
+
+
