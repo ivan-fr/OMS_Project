@@ -27,7 +27,7 @@ export class BusinessEventDto {
 
   @ApiPropertyOptional({
     type: BusinessEventPayloadDto,
-    example: { userId: '67e2ff0e8b4fa9d2e40aa111', amount: 120.5 },
+    example: { userId: '67e2ff0e8b4fa9d2e40aa111', email: 'user@example.com', orderId: 'order-1', amount: 120.5, status: 'created' },
   })
   @IsObject()
   @IsOptional()
