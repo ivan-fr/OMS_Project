@@ -8,6 +8,10 @@ services:
     container_name: nestjs-oms-app
     ports:
       - '3001:3000'
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
     environment:
       - DATABASE_URL=mongodb://mongo:27017/oms_db?authSource=admin
       - REDIS_HOST=redis
