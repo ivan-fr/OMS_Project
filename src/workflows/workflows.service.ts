@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { BUSINESS_EVENT_TYPES, BusinessEventTypesEnum } from '../events/business-event.dto';
+import { Workflow } from '@prisma/client';
+import { TriggerType } from '@prisma/client';
 
 @Injectable()
 export class WorkflowsService {
@@ -45,5 +47,12 @@ export class WorkflowsService {
 
   getAllowedTriggers(): string[] {
     return [...BUSINESS_EVENT_TYPES];
+  }
+
+  async getWorkflowById(id: string) {
+    return this.prisma.workflow.findUnique({ where: { id } });
+  }
+  async updateWorkflow(id: string, data: any) {
+    return this.prisma.workflow.update({ where: { id }, data: data });
   }
 }
