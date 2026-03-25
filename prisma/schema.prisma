@@ -1,54 +1,117 @@
+/// Configuration Prisma Client pour MongoDB
 generator client {
   provider = "prisma-client-js"
 }
 
+/// Connexion à la base MongoDB
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
+/// Utilisateurs du système
+/// Chaque utilisateur possède ses propres workflows, orders et tasks
 model User {
-  id        String     @id @default(auto()) @map("_id") @db.ObjectId
-  email     String     @unique
-  password  String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  workflows Workflow[]
-  orders    Order[]
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique MongoDB
+  email        String     @unique  /// Email unique pour l'authentification
+  passwordHash String  /// Mot de passe hashé avec bcrypt (jamais stocké en clair)
+  createdAt    DateTime   @default(now())  /// Date d'inscription
+  orders       Order[]  /// Commandes créées par cet utilisateur
+  workflows    Workflow[]  /// Workflows créés et configurés par cet utilisateur
+  tasks        Task[]  /// Tâches associées à l'utilisateur
 }
 
+/// Commandes du système
+/// Déclenche des événements métier (order.created, order.paid) qui activent les workflows
 model Order {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  amount    Float
-  status    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
+  amount    Float  /// Montant de la commande
+  status    String  /// Statut: created, paid, processing, delivered, cancelled, etc.
+  userId    String   @db.ObjectId  /// Propriétaire de la commande
+  user      User     @relation(fields: [userId], references: [id])  /// Relation vers l'utilisateur
+  createdAt DateTime @default(now())  /// Création (déclenche order.created)
+  updatedAt DateTime @updatedAt  /// Dernière modification
+  tasks     Task[]  /// Tâches créées par les workflows liés à cette commande
 }
 
+/// Workflows = automatisations d'actions sur événements
+/// Exemple: "Quand une commande est créée (trigger), notifier l'admin et créer une log (actions)"
 model Workflow {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  isActive  Boolean  @default(true)
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  trigger   String?
-  actions   Action[]
-  condition String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String              @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
+  name       String  /// Nom du workflow (ex: "Notification inscription admin")
+  trigger    String  /// Événement déclencheur: user.registered, order.created, order.paid, manual.trigger
+  isActive   Boolean             @default(true)  /// Un workflow inactif ne s'exécute jamais
+  condition  String?  /// Condition optionnelle (ex: "order.amount > 100" pour filtrer les exécutions)
+  userId     String              @db.ObjectId  /// Propriétaire du workflow
+  user       User                @relation(fields: [userId], references: [id])
+  actions    WorkflowAction[]  /// Actions à exécuter dans l'ordre quand le trigger arrive
+  executions WorkflowExecution[]  /// Historique de toutes les exécutions
+  createdAt  DateTime            @default(now())
 }
 
-type Action {
-  type  String
-  order Int
+/// Actions d'un workflow
+/// Exécutées **séquentiellement** dans l'ordre défini par le champ "order"
+/// Pattern: Strategy Pattern - chaque action a sa propre implémentation
+model WorkflowAction {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
+  workflowId String   @db.ObjectId  /// Workflow auquel appartient cette action
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+  type       String  /// Type d'action: notify_admin, notify_user, create_log, create_task, update_status
+  order      Int  /// Numéro d'ordre d'exécution (1, 2, 3...). Les actions s'exécutent dans cet ordre
+  config     Json?  /// Configuration JSON optionnelle pour l'action (ex: {"newStatus": "processing"})
 }
 
-model Log {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  workflowId String?  @db.ObjectId
-  status     String
-  details    Json?
-  createdAt  DateTime @default(now())
+/// Exécution d'un workflow
+/// Trace chaque déclenchement d'un workflow et son résultat final
+/// Observabilité: permet de déboguer et d'auditer les automatisations
+model WorkflowExecution {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
+  workflowId       String            @db.ObjectId  /// Workflow exécuté
+  workflow         Workflow          @relation(fields: [workflowId], references: [id])
+  eventType        String  /// Type d'événement qui a déclenché: user.registered, order.created, etc.
+  status           String  /// Résultat: running, success, error
+  payload          Json?  /// Données de l'événement (ex: {"userId": "...", "amount": 150})
+  startedAt        DateTime          @default(now())  /// Début de l'exécution
+  finishedAt       DateTime?  /// Fin de l'exécution (null si toujours running)
+  actionExecutions ActionExecution[]  /// Détail de chaque action exécutée
 }
+
+/// Exécution d'une action spécifique
+/// Traçabilité granulaire: on sait exactement quelle action a échoué et pourquoi
+/// Permet d'identifier où s'est arrêté le workflow en cas d'erreur
+model ActionExecution {
+  id                  String            @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
+  workflowExecutionId String            @db.ObjectId  /// Exécution du workflow parent
+  workflowExecution   WorkflowExecution @relation(fields: [workflowExecutionId], references: [id])
+  actionType          String  /// Type d'action exécutée: notify_admin, create_log, create_task, etc.
+  status              String  /// Résultat: running, success, error
+  message             String?  /// Message de succès ou détail de l'erreur
+  startedAt           DateTime          @default(now())  /// Début de l'action
+  finishedAt          DateTime?  /// Fin de l'action (null si toujours running)
+}
+
+/// Tâches métier
+/// Créées par l'action "create_task" d'un workflow
+/// Exemple: action "create_task" lors d'une commande crée automatiquement une tâche "Préparer livraison"
+model Task {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
+  title     String  /// Libellé de la tâche
+  status    String  /// Statut: todo, in_progress, done, cancelled, etc.
+  userId    String?  @db.ObjectId  /// Utilisateur auquel est assignée la tâche
+  user      User?    @relation(fields: [userId], references: [id])
+  orderId   String?  @db.ObjectId  /// Commande liée (optionnel)
+  order     Order?   @relation(fields: [orderId], references: [id])
+  createdAt DateTime @default(now())  /// Créée automatiquement par un workflow
+}
+
+/// Logs applicatifs
+/// Traçabilité des notifications et actions système
+/// Créés par les actions: notify_admin, create_log, etc.
+model AppLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
+  level     String  /// Niveau: info, warning, error
+  message   String  /// Message du log
+  context   Json?  /// Contexte JSON avec détails (trigger, user, payload, etc.)
+  createdAt DateTime @default(now())  /// Horodatage du log
+}
+
