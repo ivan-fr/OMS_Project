@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nestjs-oms-app
+    ports:
+      - '3001:3000'
+    environment:
+      - DATABASE_URL=mongodb://mongo:27017/oms_db?authSource=admin
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=super_secret_key_for_jwt
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - oms-network
+
+  mongo:
+    image: mongo:6.0
+    container_name: nestjs-oms-mongo
+    ports:
+      - '27018:27017'
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - oms-network
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: nestjs-oms-redis
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis-data:/data
+    networks:
+      - oms-network
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  oms-network:
+    driver: bridge

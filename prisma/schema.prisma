@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+}
+
+model User {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  email     String     @unique
+  password  String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  workflows Workflow[]
+  orders    Order[]
+}
+
+model Order {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Workflow {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  isActive  Boolean  @default(true)
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  trigger   String?
+  actions   Action[]
+  condition String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+type Action {
+  type  String
+  order Int
+}
+
+model Log {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  workflowId String?  @db.ObjectId
+  status     String
+  details    Json?
+  createdAt  DateTime @default(now())
+}
