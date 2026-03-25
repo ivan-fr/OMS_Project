@@ -115,3 +115,11 @@ model AppLog {
   createdAt DateTime @default(now())  /// Horodatage du log
 }
 
+//Enumeration pour les types de Triggers
+enum TriggerType {
+  USER_REGISTERED
+  ORDER_CREATED
+  MANUAL_TRIGGER
+  ORDER_PAID
+}
+
