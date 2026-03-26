@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { WorkflowsService } from './workflows.service';
 import { UpdateTriggerDto } from './dto/updata-trigger.dto';
+import { CreateActionDto } from './dto/create-action.dto';
 
 @ApiTags('Workflows')
 @Controller('workflows')
@@ -82,4 +83,21 @@ export class WorkflowsController {
 			updateTriggerValueToUpdate.trigger,
 		);
 	}
+
+    @Post(':id/actions')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Ajouter des actions à un workflow (US07)' })
+    async addAction(
+      @Req() req: { user: { sub: string } },
+      @Param('id') workflowId: string,
+      @Body() body: CreateActionDto[],
+    ) {
+      // L'utilisateur doit être propriétaire du workflow.
+      return this.workflowsService.addActionToWorkflow(
+        workflowId,
+        req.user.sub,
+        body,
+      );
+    }
 }

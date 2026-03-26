@@ -1,12 +1,48 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { BUSINESS_EVENT_TYPES } from '../events/business-event.dto';
 import { TriggerType } from '@prisma/client';
+import { CreateActionDto } from './dto/create-action.dto';
 
 @Injectable()
 export class WorkflowsService {
 	constructor(private readonly prisma: PrismaService) {}
+
+    async addActionToWorkflow(
+      workflowId: string,
+      userId: string,
+      body: CreateActionDto[],
+    ) {
+      // Vérifie ownership + existence pour éviter la fuite de données.
+      const workflow = await this.getWorkflowById(workflowId, userId);
+
+      if (!workflow) {
+        throw new NotFoundException('Workflow not found');
+      }
+
+      if (!workflow.isActive) {
+        throw new BadRequestException('Workflow is not active');
+      }
+
+      return this.prisma.workflow.update({
+        where: { id: workflowId },
+        data: {
+          actions: {
+            deleteMany: {},
+            create: body.map((actionDto) => ({
+              type: actionDto.type,
+              config: actionDto.config,
+              order: actionDto.order,
+            })),
+          },
+        },
+      });
+    }
 
 	create(userId: string, dto: CreateWorkflowDto) {
 		return this.prisma.workflow.create({
@@ -23,7 +59,7 @@ export class WorkflowsService {
 				name: true,
 				isActive: true,
 				trigger: true,
-				condition: true,
+        condition: true,
 				userId: true,
 				createdAt: true,
 			},
