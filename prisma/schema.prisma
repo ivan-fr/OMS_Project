@@ -121,11 +121,8 @@ enum TriggerType {
   ORDER_CREATED
   MANUAL_TRIGGER
   ORDER_PAID
+  ORDER_NUM
 }
-
-
-
-
 
 // Enumeration des actions supportées par le moteur de workflow
 enum ActionType {

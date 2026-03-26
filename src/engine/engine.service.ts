@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
 import { WorkflowConditionService } from './services/workflow-condition.service';
+import { CreateAppLogDto } from 'src/appLog/dto/app-log.dto';
 
 @Injectable()
 export class EngineService {
@@ -68,6 +69,8 @@ export class EngineService {
       payload: data,
     });
 
+    if(eventType !== TriggerType.ORDER_NUM){
+
     // On limite la recherche au propriétaire pour éviter les fuites inter-users.
     const matchedWorkflows = await this.matcher.findMatchingWorkflows(
       eventType,
@@ -113,6 +116,23 @@ export class EngineService {
       // Orchestration workflow par workflow.
       await this.runWorkflow(workflow, data);
     }
+    }else{
+      // Cas BONUS pour ORDER_NUM: on veut enregistrer dans les log le nombre total de commandes déjà payées périodiquement.
+      const orderCount = await this.prisma.order.count({
+        where: { status: 'paid' },
+      });
+      let log: CreateAppLogDto = {
+        level: 'info',
+        message: `Total de commandes déjà payées est : ${orderCount}`,
+      };
+
+      await this.appLogCreate(log);
+    }
+
+  }
+
+  private async appLogCreate(log: CreateAppLogDto) {
+    await this.prisma.appLog.create({ data: log });
   }
 
   private async runWorkflow(workflow: Workflow, data: BusinessEventPayloadDto) {
