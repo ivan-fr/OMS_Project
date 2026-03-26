@@ -82,4 +82,12 @@ export class WorkflowsController {
 			updateTriggerValueToUpdate.trigger,
 		);
 	}
+
+    @Post(':id/actions')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Ajouter une action à un workflow' })
+    async addAction( @Param('id') workflowId: string, @Body() body: CreateActionDto[]) {
+        return this.workflowsService.addAction(workflowId, body);
+    }
 }

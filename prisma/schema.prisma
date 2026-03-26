@@ -123,12 +123,12 @@ enum TriggerType {
   ORDER_PAID
 }
 
-// Enumeration des actions supportées par le moteur (US09)
+// Enumeration des actions supportées par le moteur (US07 & US09)
 enum ActionType {
   NOTIFY_ADMIN
   NOTIFY_USER
   CREATE_LOG
-  CREATE_TASK
+  CREATE_TASK_DB
   UPDATE_STATUS
 }
 
