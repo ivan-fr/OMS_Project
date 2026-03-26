@@ -140,6 +140,16 @@ export class WorkflowsRepository {
     });
   }
 
+  findActionsByWorkflowForUser(workflowId: string, userId: string) {
+    return this.prisma.workflowAction.findMany({
+      where: {
+        workflowId,
+        workflow: { userId },
+      },
+      orderBy: { order: 'asc' },
+    });
+  }
+
   createWorkflowExecution(data: {
     workflowId: string;
     eventType: string;

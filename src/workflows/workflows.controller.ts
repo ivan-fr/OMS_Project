@@ -77,6 +77,17 @@ export class WorkflowsController {
 		return this.workflowsService.findExecutionsByWorkflow(id, req.user.sub);
 	}
 
+	@Get(':id/actions')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Lister les actions d’un workflow' })
+	findActionsByWorkflow(
+		@Req() req: { user: { sub: string } },
+		@Param('id') id: string,
+	) {
+		return this.workflowsService.findActionsByWorkflow(id, req.user.sub);
+	}
+
 	@Get('triggers')
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth()

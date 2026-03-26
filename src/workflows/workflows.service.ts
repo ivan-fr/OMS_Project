@@ -48,6 +48,19 @@ export class WorkflowsService {
     return this.workflowsRepository.findExecutionsByUser(userId);
   }
 
+  async findActionsByWorkflow(workflowId: string, userId: string) {
+    const workflow = await this.getWorkflowById(workflowId, userId);
+
+    if (!workflow) {
+      throw new NotFoundException('Workflow not found');
+    }
+
+    return this.workflowsRepository.findActionsByWorkflowForUser(
+      workflowId,
+      userId,
+    );
+  }
+
   async findExecutionsByWorkflow(workflowId: string, userId: string) {
     const workflow = await this.getWorkflowById(workflowId, userId);
 
