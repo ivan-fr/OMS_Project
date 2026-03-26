@@ -49,6 +49,29 @@ async function bootstrap() {
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, swaggerDocument);
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  const server = await app.listen(port);
+  
+  console.log(`✅ Application started on port ${port}`);
+
+  // Graceful shutdown handlers
+  process.on('SIGTERM', async () => {
+    console.log('📍 SIGTERM received, shutting down gracefully...');
+    await app.close();
+    server.close(() => {
+      console.log('✅ Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('📍 SIGINT received, shutting down gracefully...');
+    await app.close();
+    server.close(() => {
+      console.log('✅ Server closed');
+      process.exit(0);
+    });
+  });
 }
-bootstrap();
+
+await bootstrap();
