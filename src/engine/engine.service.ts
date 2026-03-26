@@ -87,6 +87,8 @@ export class EngineService {
       },
     });
 
+    this.logger.log(`Starting workflow execution: ${workflow.id}`);
+
     try {
       // Exécution séquentielle des actions (order ASC).
       const workflowActions = await this.prisma.workflowAction.findMany({
