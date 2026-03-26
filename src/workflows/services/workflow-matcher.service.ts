@@ -10,7 +10,7 @@ export class WorkflowMatcherService {
 
   async findMatchingWorkflows(eventType: TriggerType, userId?: string) {
     this.logger.debug(
-      `Searching active workflows matching trigger="${eventType}" for userId="${userId ?? 'any'}"`,
+      `Searching active workflows matching trigger="${eventType}" for userId="${userId ?? 'Unspecified'}"`,
     );
 
     const workflows = await this.prisma.workflow.findMany({
@@ -31,7 +31,7 @@ export class WorkflowMatcherService {
     });
 
     this.logger.log(
-      `Found ${workflows.length} matching workflow(s) for event "${eventType}" and user "${userId ?? 'any'}"`,
+      `Found ${workflows.length} matching workflow(s) for event "${eventType}" and user "${userId ?? 'Unspecified'}"`,
     );
 
     return workflows;
