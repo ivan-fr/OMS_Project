@@ -56,7 +56,7 @@ model WorkflowAction {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
   workflowId String   @db.ObjectId  /// Workflow auquel appartient cette action
   workflow   Workflow @relation(fields: [workflowId], references: [id])
-  type       String  /// Type d'action: notify_admin, notify_user, create_log, create_task, update_status
+  type       ActionType  /// Type d'action exécutable par le moteur
   order      Int  /// Numéro d'ordre d'exécution (1, 2, 3...). Les actions s'exécutent dans cet ordre
   config     Json?  /// Configuration JSON optionnelle pour l'action (ex: {"newStatus": "processing"})
 }
@@ -83,7 +83,7 @@ model ActionExecution {
   id                  String            @id @default(auto()) @map("_id") @db.ObjectId  /// Identifiant unique
   workflowExecutionId String            @db.ObjectId  /// Exécution du workflow parent
   workflowExecution   WorkflowExecution @relation(fields: [workflowExecutionId], references: [id])
-  actionType          String  /// Type d'action exécutée: notify_admin, create_log, create_task, etc.
+  actionType          ActionType  /// Type d'action exécutée
   status              String  /// Résultat: running, success, error
   message             String?  /// Message de succès ou détail de l'erreur
   startedAt           DateTime          @default(now())  /// Début de l'action
@@ -121,5 +121,14 @@ enum TriggerType {
   ORDER_CREATED
   MANUAL_TRIGGER
   ORDER_PAID
+}
+
+// Enumeration des actions supportées par le moteur (US09)
+enum ActionType {
+  NOTIFY_ADMIN
+  NOTIFY_USER
+  CREATE_LOG
+  CREATE_TASK
+  UPDATE_STATUS
 }
 
