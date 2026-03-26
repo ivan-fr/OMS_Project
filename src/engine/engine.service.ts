@@ -151,8 +151,15 @@ export class EngineService {
     try {
       // Exécution séquentielle des actions (order ASC).
       const workflowActions = await this.workflowsRepository.findActionsByWorkflowOrdered(workflow.id);
+      
+      this.logger.log(`Found ${workflowActions.length} actions for workflow ${workflow.id}`);
+      await this.appLogHelper.info(`Found ${workflowActions.length} actions for workflow ${workflow.id}`, {
+        workflowId: workflow.id,
+        actionCount: workflowActions.length,
+      });
 
       for (const action of workflowActions) {
+        this.logger.log(`Executing action ${action.id} of type ${action.type}`);
         await this.runWorkflowAction(execution.id, action, data);
       }
 
