@@ -79,7 +79,7 @@ export class EngineService {
 
       await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
         eventType,
-        userId: payload.data.userId,
+        userId: data.userId,
         orderCount,
       });
       return;
