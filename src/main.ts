@@ -74,4 +74,7 @@ async function bootstrap() {
   });
 }
 
-await bootstrap();
+void bootstrap().catch((error) => {
+  console.error('❌ Bootstrap failed:', error);
+  process.exit(1);
+});
