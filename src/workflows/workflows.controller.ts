@@ -58,6 +58,25 @@ export class WorkflowsController {
 		return this.workflowsService.findActive(req.user.sub);
 	}
 
+	@Get('executionsHistory')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Lister les exécutions (history) de workflows' })
+	findExecutions(@Req() req: { user: { sub: string } }) {
+		return this.workflowsService.findExecutions(req.user.sub);
+	}
+
+	@Get(':id/executionsHistory')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Lister les exécutions (history) d’un workflow ' })
+	findExecutionsByWorkflow(
+		@Req() req: { user: { sub: string } },
+		@Param('id') id: string,
+	) {
+		return this.workflowsService.findExecutionsByWorkflow(id, req.user.sub);
+	}
+
 	@Get('triggers')
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth()

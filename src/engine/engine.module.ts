@@ -10,10 +10,11 @@ import { NotifyUserHandler } from './actions/handlers/notify-user.handler';
 import { CreateLogHandler } from './actions/handlers/create-log.handler';
 import { CreateTaskHandler } from './actions/handlers/create-task.handler';
 import { UpdateStatusHandler } from './actions/handlers/update-status.handler';
+import { LogsController } from './logs.controller';
 
 @Module({
   imports: [AuthModule, WorkflowsModule, PrismaModule],
-  controllers: [EngineController],
+  controllers: [EngineController, LogsController],
   providers: [
     EngineService,
     ActionExecutorService,

@@ -80,6 +80,73 @@ export class WorkflowsService {
     });
   }
 
+  findExecutions(userId: string) {
+    return this.prisma.workflowExecution.findMany({
+      where: {
+        workflow: { userId },
+      },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        workflow: {
+          select: {
+            id: true,
+            name: true,
+            trigger: true,
+          },
+        },
+        actionExecutions: {
+          orderBy: { startedAt: 'asc' },
+          select: {
+            id: true,
+            actionType: true,
+            status: true,
+            message: true,
+            startedAt: true,
+            finishedAt: true,
+          },
+        },
+      },
+      take: 50,
+    });
+  }
+
+  async findExecutionsByWorkflow(workflowId: string, userId: string) {
+    const workflow = await this.getWorkflowById(workflowId, userId);
+
+    if (!workflow) {
+      throw new NotFoundException('Workflow not found');
+    }
+
+    return this.prisma.workflowExecution.findMany({
+      where: {
+        workflowId,
+        workflow: { userId },
+      },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        workflow: {
+          select: {
+            id: true,
+            name: true,
+            trigger: true,
+          },
+        },
+        actionExecutions: {
+          orderBy: { startedAt: 'asc' },
+          select: {
+            id: true,
+            actionType: true,
+            status: true,
+            message: true,
+            startedAt: true,
+            finishedAt: true,
+          },
+        },
+      },
+      take: 50,
+    });
+  }
+
   getAllowedTriggers(): TriggerType[] {
     return [...BUSINESS_EVENT_TYPES] as TriggerType[];
   }

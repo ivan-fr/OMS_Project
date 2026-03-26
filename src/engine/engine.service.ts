@@ -24,6 +24,8 @@ export class EngineService {
     private readonly actionExecutor: ActionExecutorService,
   ) {}
 
+
+
   async receiveEvent(userId: string, dto: BusinessEventDto) {
     const matchedWorkflows = await this.matcher.findMatchingWorkflows(
       dto.eventType,
@@ -58,6 +60,11 @@ export class EngineService {
   }) {
     const { eventType, data } = payload;
     this.logger.log(`Event received: "${eventType}"`);
+    await this.writeAppLog('info', `Event received: "${eventType}"`, {
+      eventType,
+      userId: data.userId,
+      payload: data,
+    });
 
     // On limite la recherche au propriétaire pour éviter les fuites inter-users.
     const matchedWorkflows = await this.matcher.findMatchingWorkflows(
@@ -67,6 +74,14 @@ export class EngineService {
 
     if (matchedWorkflows.length === 0) {
       this.logger.warn(`No active workflow found for event "${eventType}"`);
+      await this.writeAppLog(
+        'warning',
+        `No active workflow found for event "${eventType}"`,
+        {
+          eventType,
+          userId: data.userId,
+        },
+      );
       return;
     }
 
@@ -88,6 +103,12 @@ export class EngineService {
     });
 
     this.logger.log(`Starting workflow execution: ${workflow.id}`);
+    await this.writeAppLog('info', `Starting workflow execution: ${workflow.id}`, {
+      workflowId: workflow.id,
+      trigger: workflow.trigger,
+      userId: data.userId,
+      workflowExecutionId: execution.id,
+    });
 
     try {
       // Exécution séquentielle des actions (order ASC).
@@ -106,6 +127,15 @@ export class EngineService {
       });
 
       this.logger.log(`Workflow ${workflow.id} executed with success`);
+      await this.writeAppLog(
+        'info',
+        `Workflow ${workflow.id} executed with success`,
+        {
+          workflowId: workflow.id,
+          workflowExecutionId: execution.id,
+          userId: data.userId,
+        },
+      );
     } catch (error) {
       // Si une action échoue, le workflow passe en erreur.
       await this.prisma.workflowExecution.update({
@@ -116,6 +146,12 @@ export class EngineService {
       const stackOrMessage =
         error instanceof Error ? error.stack ?? error.message : String(error);
       this.logger.error(`Workflow ${workflow.id} failed`, stackOrMessage);
+      await this.writeAppLog('error', `Workflow ${workflow.id} failed`, {
+        workflowId: workflow.id,
+        workflowExecutionId: execution.id,
+        userId: data.userId,
+        error: stackOrMessage,
+      });
     }
   }
 
@@ -134,6 +170,13 @@ export class EngineService {
     });
 
     this.logger.log(`Starting action: ${action.type}`);
+    await this.writeAppLog('info', `Starting action: ${action.type}`, {
+      workflowExecutionId,
+      actionExecutionId: actionExecution.id,
+      actionType: action.type,
+      workflowId: action.workflowId,
+      userId: data.userId,
+    });
 
     try {
       const result = await this.actionExecutor.executeAction(
@@ -143,6 +186,14 @@ export class EngineService {
       );
 
       this.logger.log(`Action ${action.type} succeeded`);
+      await this.writeAppLog('info', `Action ${action.type} succeeded`, {
+        workflowExecutionId,
+        actionExecutionId: actionExecution.id,
+        actionType: action.type,
+        workflowId: action.workflowId,
+        userId: data.userId,
+        result,
+      });
 
       await this.prisma.actionExecution.update({
         where: { id: actionExecution.id },
@@ -154,6 +205,14 @@ export class EngineService {
       });
     } catch (error) {
       this.logger.error(`Action ${action.type} failed`, String(error));
+      await this.writeAppLog('error', `Action ${action.type} failed`, {
+        workflowExecutionId,
+        actionExecutionId: actionExecution.id,
+        actionType: action.type,
+        workflowId: action.workflowId,
+        userId: data.userId,
+        error: String(error),
+      });
 
       await this.prisma.actionExecution.update({
         where: { id: actionExecution.id },
@@ -168,5 +227,51 @@ export class EngineService {
       throw error;
     }
   }
+
+
+
+
+
+  // HELPER POUR LOGGING STRUCTURÉ ET PERSISTANT
+  private async writeAppLog(
+    level: 'info' | 'warning' | 'error',
+    message: string,
+    context?: Record<string, unknown>,
+  ) {
+    try {
+      await this.prisma.appLog.create({
+        data: {
+          level,
+          message,
+          context: context
+            ? (context as unknown as Prisma.InputJsonValue)
+            : undefined,
+        },
+      });
+    } catch (error) {
+      const details = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Unable to persist app log: ${details}`);
+    }
+  }
+
+  async getLogsForUser(userId: string) {
+    const logs = await this.prisma.appLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    return logs
+      .filter((log) => {
+        if (!log.context || typeof log.context !== 'object' || Array.isArray(log.context)) {
+          return false;
+        }
+
+        const contextUserId = (log.context as Record<string, unknown>).userId;
+        return typeof contextUserId === 'string' && contextUserId === userId;
+      })
+      .slice(0, 50);
+  }
+
+
 }
 
