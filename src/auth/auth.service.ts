@@ -21,17 +21,10 @@ export class AuthService {
 		}
 
 		const passwordHash = await bcrypt.hash(dto.password, 10);
-		const user = await this.usersService.create({
+	return this.usersService.create({
 			email: dto.email,
 			passwordHash,
 		});
-
-		this.eventEmitter.emitAsync('user.registered', {
-			userId: user.id,
-			email: user.email,
-		});
-
-		return user;
 	}
 
 	async login(dto: LoginDto) {
