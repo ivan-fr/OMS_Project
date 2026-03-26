@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
+import { WorkflowConditionService } from './services/workflow-condition.service';
 
 @Injectable()
 export class EngineService {
@@ -22,6 +23,7 @@ export class EngineService {
     private readonly eventEmitter: EventEmitter2,
     private readonly prisma: PrismaService,
     private readonly actionExecutor: ActionExecutorService,
+    private readonly workflowConditionService: WorkflowConditionService,
   ) {}
 
 
@@ -86,6 +88,28 @@ export class EngineService {
     }
 
     for (const workflow of matchedWorkflows) {
+      const conditionMatched = this.workflowConditionService.evaluate(
+        workflow.condition,
+        data,
+      );
+
+      if (!conditionMatched) {
+        this.logger.log(
+          `Workflow ${workflow.id} ignored: condition not satisfied`,
+        );
+        await this.writeAppLog(
+          'info',
+          `Workflow ${workflow.id} ignored: condition not satisfied`,
+          {
+            workflowId: workflow.id,
+            condition: workflow.condition,
+            eventType,
+            userId: data.userId,
+          },
+        );
+        continue;
+      }
+
       // Orchestration workflow par workflow.
       await this.runWorkflow(workflow, data);
     }
