@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ActionType } from '@prisma/client';
 import { ActionHandler } from '../action-handler.interface';
 import { ActionExecutionContext } from '../action-context.type';
-import { AppLogHelperService } from 'src/appLog/app-log-helper.service';
+import { AppLogHelperService } from '../../../appLog/app-log-helper.service';
 
 @Injectable()
 export class CallWebhookHandler implements ActionHandler {
