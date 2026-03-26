@@ -5,8 +5,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
 
-
-describe('EngineService', () => {
+describe('EngineService - receiveEvent', () => {
   let service: EngineService;
   let eventEmitter: EventEmitter2;
   let matcherService: jest.Mocked<WorkflowMatcherService>;
@@ -55,54 +54,28 @@ describe('EngineService', () => {
     matcherService = module.get(WorkflowMatcherService) as any;
   });
 
-  describe('receiveEvent', () => {
-    it('doit sécuriser le payload en forçant le userId du token', async () => {
-      matcherService.findMatchingWorkflows.mockResolvedValue([]);
-      
-      const realUserId = 'secure-user-123';
-      const maliciousPayload = {
-        userId: 'hacker-user-999',
-        amount: 1000
-      };
+  it('doit sécuriser le payload en forçant le userId du token', async () => {
+    matcherService.findMatchingWorkflows.mockResolvedValue([]);
+    
+    const realUserId = 'secure-user-123';
+    const maliciousPayload = {
+      userId: 'hacker-user-999',
+      amount: 1000
+    };
 
-      await service.receiveEvent(realUserId, {
-        eventType: 'ORDER_CREATED' as any,
-        payload: maliciousPayload,
-      });
+    await service.receiveEvent(realUserId, {
+      eventType: 'ORDER_CREATED' as any,
+      payload: maliciousPayload,
+    });
 
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        'ORDER_CREATED',
-        expect.objectContaining({
-          data: expect.objectContaining({
-            userId: realUserId,
-            amount: 1000
-          }),
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'ORDER_CREATED',
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: realUserId,
+          amount: 1000
         }),
-      );
-    });
-  });
-
-  describe('handleBusinessEvent', () => {
-    it('doit arrêter le traitement si aucun workflow ne correspond', async () => {
-      matcherService.findMatchingWorkflows.mockResolvedValue([]);
-
-      jest.spyOn(service as any, 'writeAppLog').mockResolvedValue(undefined);
-      const spyLogger = jest.spyOn(service['logger'], 'warn').mockImplementation();
-
-      await service.handleBusinessEvent({
-        eventType: 'ORDER_CREATED' as any,
-        data: { userId: 'u1' },
-      });
-
-      expect(matcherService.findMatchingWorkflows).toHaveBeenCalledWith(
-        'ORDER_CREATED',
-        'u1'
-      );
-      expect(spyLogger).toHaveBeenCalledWith(
-        expect.stringContaining('No active workflow found')
-      );
-      
-      spyLogger.mockRestore();
-    });
+      }),
+    );
   });
 });
