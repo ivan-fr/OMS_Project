@@ -6,14 +6,28 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const corsOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+  const corsOriginEnv = process.env.CORS_ORIGIN?.trim();
+  const allowAllOrigins = !corsOriginEnv || corsOriginEnv === '*';
+  const corsOrigins = new Set(
+    (corsOriginEnv ?? '')
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/$/, ''))
+      .filter(Boolean),
+  );
 
   app.enableCors({
-    origin: corsOrigins,
+    origin: (requestOrigin, callback) => {
+      if (allowAllOrigins || !requestOrigin) {
+        callback(null, true);
+        return;
+      }
+
+      const normalizedOrigin = requestOrigin.replace(/\/$/, '');
+      callback(null, corsOrigins.has(normalizedOrigin));
+    },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
+    optionsSuccessStatus: 204,
   });
 
   // Validation globale pour tous les DTOs.
