@@ -7,6 +7,7 @@ import { CreateTaskHandler } from './handlers/create-task.handler';
 import { NotifyAdminHandler } from './handlers/notify-admin.handler';
 import { NotifyUserHandler } from './handlers/notify-user.handler';
 import { UpdateStatusHandler } from './handlers/update-status.handler';
+import { CallWebhookHandler } from './handlers/call-webhook.handler';
 
 @Injectable()
 export class ActionExecutorService {
@@ -18,6 +19,7 @@ export class ActionExecutorService {
     createLogHandler: CreateLogHandler,
     createTaskHandler: CreateTaskHandler,
     updateStatusHandler: UpdateStatusHandler,
+    callWebhookHandler: CallWebhookHandler,
   ) {
     const handlers: ActionHandler[] = [
       notifyAdminHandler,
@@ -25,6 +27,7 @@ export class ActionExecutorService {
       createLogHandler,
       createTaskHandler,
       updateStatusHandler,
+      callWebhookHandler,
     ];
 
     // Enregistre chaque stratégie disponible.

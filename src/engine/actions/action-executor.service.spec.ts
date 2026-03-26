@@ -15,6 +15,7 @@ describe('ActionExecutorService', () => {
       { type: ActionType.CREATE_LOG, execute: jest.fn() } as any,
       { type: ActionType.CREATE_TASK_DB, execute: jest.fn() } as any,
       { type: ActionType.UPDATE_STATUS, execute: jest.fn() } as any,
+      { type: ActionType.CALL_WEBHOOK, execute: jest.fn() } as any,
     );
 
     const result = await service.executeAction(
@@ -40,6 +41,7 @@ describe('ActionExecutorService', () => {
       { type: ActionType.CREATE_LOG, execute: jest.fn() } as any,
       { type: ActionType.CREATE_TASK_DB, execute: jest.fn() } as any,
       { type: ActionType.UPDATE_STATUS, execute: jest.fn() } as any,
+      { type: ActionType.CALL_WEBHOOK, execute: jest.fn() } as any,
     );
 
     await expect(
@@ -69,6 +71,7 @@ describe('ActionExecutorService', () => {
       { type: ActionType.CREATE_LOG, execute: jest.fn() } as any,
       { type: ActionType.CREATE_TASK_DB, execute: jest.fn() } as any,
       { type: ActionType.UPDATE_STATUS, execute: jest.fn() } as any,
+      { type: ActionType.CALL_WEBHOOK, execute: jest.fn() } as any,
     );
 
     const result = await service.executeStandaloneAction(
