@@ -1,53 +1,141 @@
-# OMS (Order Management System) - NestJS
+# OMS - Order Management System (NestJS)
 
-Ce projet est une plateforme de gestion de commandes et d'exécution de workflows automatiques (basée sur des triggers, actions et conditions), construite de manière full-dockérisée avec **NestJS**.
+Plateforme backend de gestion de commandes avec moteur de workflows événementiels.
 
-## Prérequis
+Le projet permet de :
+- gérer des utilisateurs (inscription / connexion),
+- créer des commandes,
+- créer des workflows (trigger + actions + condition),
+- exécuter des actions automatiquement lors d’événements métier,
+- tracer l’exécution (workflow, actions, logs applicatifs).
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+## Stack technique
 
-## Lancement du projet (Uniquement avec Docker)
+- NestJS 11
+- Prisma + MongoDB
+- Redis + BullMQ
+- EventEmitter NestJS
+- JWT (auth simple)
+- Docker / Docker Compose
 
-L'entièreté du projet et de ses bases de données est gérée par Docker. Il n'est **pas nécessaire d'installer Node.js ni d'exécuter l'application en local via npm**.
+## Fonctionnalités implémentées (MVP + extensions)
 
-1. Assurez-vous d'avoir les ports `3001`, `27018` et `6380` libres sur votre machine.
-2. Démarrez l'infrastructure complète avec la commande suivante à la racine du projet :
+- Auth : inscription, connexion, routes protégées
+- Orders : création de commande
+- Workflows :
+	- création,
+	- activation/inactivation,
+	- association d’un trigger,
+	- ajout d’actions ordonnées,
+	- condition simple (`amount > 100`, `status === "paid"`, etc.)
+- Engine :
+	- matching des workflows actifs par trigger,
+	- exécution séquentielle des actions,
+	- statut global d’exécution (`success` / `error`),
+	- traçabilité détaillée des actions
+- Observabilité :
+	- `WorkflowExecution` / `ActionExecution`,
+	- logs applicatifs centralisés via `AppLogHelperService`,
+	- endpoint de consultation des logs utilisateur (`GET /logs`)
+
+## Triggers supportés
+
+- `USER_REGISTERED`
+- `ORDER_CREATED`
+- `MANUAL_TRIGGER`
+- `ORDER_PAID`
+- `ORDER_NUM` 
+
+## Actions supportées
+
+- `NOTIFY_ADMIN`
+- `NOTIFY_USER`
+- `CREATE_LOG`
+- `CREATE_TASK_DB`
+- `UPDATE_STATUS`
+- `CALL_WEBHOOK` 
+
+## Lancement avec Docker (recommandé)
+
+### Prérequis
+
+- Docker
+- Docker Compose
+
+### Ports utilisés
+
+- API NestJS : `3001` (container `3000`)
+- MongoDB : `27018` (container `27017`) via profil `localdb`
+- Redis : `6380` (container `6379`)
+
+### Démarrage complet (avec Mongo local)
+
+```bash
+docker compose --profile localdb up -d --build
+```
+
+### Démarrage sans Mongo local
+
+Utilisez ce mode uniquement si vous avez déjà un Mongo externe configuré dans `DATABASE_URL`.
 
 ```bash
 docker compose up -d --build
 ```
 
-### Services inclus :
-
-- **App NestJS** (accessible sur le port `3001`) : Serveur API principal gérant la logique métier des commandes et l'engine de workflow.
-- **MongoDB** (exposé sur le port `27018`) : Base de données NoSQL pour les données (géré via Prisma v6 sans erreur d'incompatibilité avec `url`).
-- **Redis** (exposé sur le port `6380`) : Moteur de files d'attente asynchrones pour les workers BullMQ.
-
-### Maintenance & Logs
-
-Pour voir les logs de l'application en temps réel dans votre terminal :
+### Logs / arrêt
 
 ```bash
 docker compose logs -f app
-```
-
-Pour arrêter le projet proprement (sans supprimer les données persistantes) :
-
-```bash
 docker compose down
 ```
 
-## Structure Actuelle
+## Exécution locale (optionnelle)
 
-Conformément aux exigences initiales, seuls le socle et la structure des répertoires ont été créés pour préparer l'arrivée des User Stories du backlog.
-- **AuthModule / UsersModule** : Pour la sécurité et gestion des accès.
-- **OrdersModule** : Opérations et lifecycle liés aux commandes.
-- **WorkflowsModule** : Structure pour configurer les Triggers, Actions, Conditions.
-- **EngineModule** : Moteur d'exécution asynchrone orchestrant les traitements successifs.
-- **Prisma** : Service ORM généré dynamiquement lors du build Docker.
+Si vous travaillez sans Docker pour les tests/dev :
 
-## Note : Authentification
+```bash
+npm install
+npm run test
+npm run start:dev
+```
 
-Le projet a bien pris en compte la recommandation pour l'Auth ! 
-La librairie **[better-auth](https://better-auth.com/)** a été ajoutée aux dépendances et le framework est pensé pour pouvoir accueillir son exécution (ou s'interconnecter avec une image **[Keycloak](https://www.keycloak.org/)** si une approche externe est privilégiée plus tard).
+> `prisma generate` est exécuté automatiquement via `postinstall`.
+
+## Scripts utiles
+
+```bash
+npm run test
+npm run test -- --runInBand
+npm run test:cov
+npm run build
+npm run lint
+```
+
+## Architecture (vue rapide)
+
+- `src/auth` : auth JWT
+- `src/users` : users + émission d’événements
+- `src/orders` : gestion commandes
+- `src/workflows` : configuration workflows
+- `src/engine` : orchestration et exécution des actions
+- `src/appLog` : helper centralisé des logs applicatifs
+- `src/prisma` : accès DB Prisma
+
+## Observabilité
+
+Le moteur journalise à deux niveaux :
+
+1. **Exécution métier persistée**
+	 - `WorkflowExecution` : statut global, payload, timestamps
+	 - `ActionExecution` : statut par action, message, timestamps
+
+2. **Logs applicatifs**
+	 - Table `AppLog`
+	 - Centralisation via `AppLogHelperService`
+	 - Consultation par utilisateur via `GET /logs`
+
+## Notes
+
+- Le projet suit une architecture modulaire NestJS avec services métier découplés.
+- Les handlers d’actions suivent un pattern Strategy (un handler par type d’action).
+- Les conditions de workflow sont évaluées de manière simple et sûre (sans `eval`).

@@ -120,7 +120,7 @@ export class EngineService {
     }else{
       // Cas BONUS pour ORDER_NUM: on veut enregistrer dans les log le nombre total de commandes déjà payées périodiquement.
       const orderCount = await this.prisma.order.count({
-        where: { status: 'paid' },
+        where: { status: 'paid', userId: data.userId },
       });
    
       await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
