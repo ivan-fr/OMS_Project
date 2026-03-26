@@ -111,7 +111,9 @@ export class EngineService {
         data: { status: 'error', finishedAt: new Date() },
       });
 
-      this.logger.error(`Workflow ${workflow.id} failed`, error as string);
+      const stackOrMessage =
+        error instanceof Error ? error.stack ?? error.message : String(error);
+      this.logger.error(`Workflow ${workflow.id} failed`, stackOrMessage);
     }
   }
 
