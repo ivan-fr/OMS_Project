@@ -74,13 +74,35 @@ export class EngineService {
     });
     if (eventType === TriggerType.ORDER_NUM) {
       // Cas BONUS pour ORDER_NUM: on veut enregistrer dans les log le nombre total de commandes déjà payées périodiquement.
-      const orderCount = await this.ordersRepository.countPaidByUser(data.userId);
+      this.logger.log(`[ORDER_NUM] Processing ORDER_NUM event for userId: ${data.userId}`);
+      
+      if (!data.userId) {
+        this.logger.warn(`[ORDER_NUM] Missing userId in ORDER_NUM event payload`);
+        await this.appLogHelper.warning('ORDER_NUM event received without userId', {
+          eventType,
+          payload: data,
+        });
+        return;
+      }
 
-      await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
-        eventType,
-        userId: data.userId,
-        orderCount,
-      });
+      try {
+        const orderCount = await this.ordersRepository.countPaidByUser(data.userId);
+        this.logger.log(`[ORDER_NUM] User ${data.userId} has ${orderCount} paid orders`);
+
+        await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
+          eventType,
+          userId: data.userId,
+          orderCount,
+        });
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(`[ORDER_NUM] Failed to count orders for userId ${data.userId}: ${errorMsg}`);
+        await this.appLogHelper.error(`Failed to process ORDER_NUM event`, {
+          eventType,
+          userId: data.userId,
+          error: errorMsg,
+        });
+      }
       return;
     }
 
