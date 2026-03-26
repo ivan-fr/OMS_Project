@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TriggerType } from '@prisma/client';
 
 @Injectable()
 export class WorkflowMatcherService {
@@ -7,7 +8,7 @@ export class WorkflowMatcherService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findMatchingWorkflows(eventType: string, userId?: string) {
+  async findMatchingWorkflows(eventType: TriggerType, userId?: string) {
     this.logger.debug(
       `Searching active workflows matching trigger="${eventType}" for userId="${userId ?? 'any'}"`,
     );
@@ -25,6 +26,7 @@ export class WorkflowMatcherService {
         isActive: true,
         condition: true,
         userId: true,
+        createdAt: true,
       },
     });
 

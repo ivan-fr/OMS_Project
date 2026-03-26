@@ -1,28 +1,18 @@
-import { IsIn, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsObject, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BusinessEventPayloadDto } from './business-event-payload.dto';
+import { TriggerType } from '@prisma/client';
 
-export const BUSINESS_EVENT_TYPES = [
-  'user.registered',
-  'order.created',
-  'manual.trigger',
-] as const;
+export const BUSINESS_EVENT_TYPES = Object.values(TriggerType);
 
-export enum BusinessEventTypesEnum {
-  USER_REGISTERED = 'user.registered',
-  ORDER_CREATED = 'order.created',
-  MANUAL_TRIGGER = 'manual.trigger',
-}
-
-export type BusinessEventType = (typeof BUSINESS_EVENT_TYPES)[number];
+export type BusinessEventType = TriggerType;
 
 export class BusinessEventDto {
   @ApiProperty({
-    enum: BUSINESS_EVENT_TYPES,
-    example: 'manual.trigger',
+    enum: TriggerType,
+    example: TriggerType.MANUAL_TRIGGER,
   })
-  @IsString()
-  @IsIn(BUSINESS_EVENT_TYPES)
+  @IsEnum(TriggerType)
   eventType: BusinessEventType;
 
   @ApiPropertyOptional({

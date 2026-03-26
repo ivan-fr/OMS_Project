@@ -1,22 +1,18 @@
 import { WorkflowsController } from './workflows.controller';
 import { WorkflowsService } from './workflows.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { TriggerType } from '@prisma/client';
 
 describe('WorkflowsController', () => {
   let controller: WorkflowsController;
 
   const workflowsServiceMock = {
     create: jest.fn(),
-    getWorkflowById: jest.fn(),
-    updateWorkflow: jest.fn(),
+    assignTriggerToWorkflow: jest.fn(),
   };
-
-  const prismaServiceMock = {} as PrismaService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     controller = new WorkflowsController(
-      prismaServiceMock,
       workflowsServiceMock as unknown as WorkflowsService,
     );
   });
@@ -26,7 +22,7 @@ describe('WorkflowsController', () => {
       id: 'wf1',
       name: 'Workflow from controller',
       isActive: true,
-      trigger: 'manual.trigger',
+      trigger: TriggerType.MANUAL_TRIGGER,
       userId: 'user-42',
       createdAt: new Date(),
     });
@@ -43,25 +39,23 @@ describe('WorkflowsController', () => {
 
   it('triggerworkflow: met à jour le workflow actif', async () => {
     const workflowId = 'test-id';
-    const existingWorkflow = {
+    workflowsServiceMock.assignTriggerToWorkflow.mockResolvedValue({
       id: workflowId,
       name: 'Existing workflow',
       isActive: true,
-      trigger: 'MANUAL_TRIGGER',
+      trigger: TriggerType.ORDER_CREATED,
       userId: 'user-42',
       createdAt: new Date(),
-    };
-
-    workflowsServiceMock.getWorkflowById.mockResolvedValue(existingWorkflow);
-    workflowsServiceMock.updateWorkflow.mockResolvedValue({
-      ...existingWorkflow,
-      trigger: 'ORDER_CREATED',
     });
 
-    const result = await controller.triggerworkflow(workflowId, { trigger: 'ORDER_CREATED' });
+    const req = { user: { sub: 'user-42' } };
+    const result = await controller.triggerworkflow(req, workflowId, { trigger: TriggerType.ORDER_CREATED });
 
-    expect(workflowsServiceMock.getWorkflowById).toHaveBeenCalledWith(workflowId);
-    expect(workflowsServiceMock.updateWorkflow).toHaveBeenCalledWith(workflowId, { trigger: 'ORDER_CREATED' });
-    expect(result.trigger).toBe('ORDER_CREATED');
+    expect(workflowsServiceMock.assignTriggerToWorkflow).toHaveBeenCalledWith(
+      workflowId,
+      'user-42',
+      TriggerType.ORDER_CREATED,
+    );
+    expect(result.trigger).toBe(TriggerType.ORDER_CREATED);
   });
 });

@@ -1,18 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { WorkflowsService } from './workflows.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { BusinessEventTypesEnum } from 'src/events/business-event.dto';
 import { TriggerType } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { WorkflowsService } from './workflows.service';
 
 describe('WorkflowsService', () => {
   let service: WorkflowsService;
-  let prisma: PrismaService;
 
   const prismaMock = {
     workflow: {
       create: jest.fn(),
-      getWorkflowById: jest.fn(),
-      updateWorkflow: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
     },
   };
 
@@ -27,7 +25,6 @@ describe('WorkflowsService', () => {
     }).compile();
 
     service = module.get<WorkflowsService>(WorkflowsService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   it('create: crée un workflow avec isActive explicite', async () => {
@@ -35,7 +32,7 @@ describe('WorkflowsService', () => {
       id: 'wf1',
       name: 'Workflow test',
       isActive: false,
-      trigger: 'manual.trigger',
+      trigger: TriggerType.MANUAL_TRIGGER,
       userId: 'user-1',
       createdAt: new Date(),
     });
@@ -51,8 +48,7 @@ describe('WorkflowsService', () => {
         isActive: false,
         condition: undefined,
         userId: 'user-1',
-        // US05: trigger fixé côté serveur.
-        trigger: BusinessEventTypesEnum.MANUAL_TRIGGER,
+        trigger: TriggerType.MANUAL_TRIGGER,
       },
       select: {
         id: true,
@@ -72,7 +68,7 @@ describe('WorkflowsService', () => {
       id: 'wf2',
       name: 'Workflow default active',
       isActive: true,
-      trigger: BusinessEventTypesEnum.MANUAL_TRIGGER,
+      trigger: TriggerType.MANUAL_TRIGGER,
       userId: 'user-2',
       createdAt: new Date(),
     });
@@ -81,35 +77,34 @@ describe('WorkflowsService', () => {
       name: 'Workflow default active',
     });
 
-    it('ça devrait mettre à jour le trigger d1 workflow ', async () => {
-        prismaMock.workflow.getWorkflowById.mockResolvedValue({ id: '1' });
-
-        prismaMock.workflow.updateWorkflow.mockResolvedValue({
-          id: '1',
-          trigger: TriggerType.ORDER_CREATED,
-        });
-
-        const result = await service.updateWorkflow(
-          '1',
-          { trigger: TriggerType.ORDER_CREATED }
-        );
-
-        expect(prisma.workflow.update).toHaveBeenCalledWith({
-          where: { id: '1' },
-          data: { trigger: TriggerType.ORDER_CREATED },
-        });
-
-        expect(result.trigger).toBe(TriggerType.ORDER_CREATED);
-      });
-
     expect(prismaMock.workflow.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           isActive: true,
           userId: 'user-2',
-          trigger: BusinessEventTypesEnum.MANUAL_TRIGGER,
+          trigger: TriggerType.MANUAL_TRIGGER,
         }),
       }),
     );
+  });
+
+  it('updateWorkflow: met à jour le trigger d’un workflow', async () => {
+    prismaMock.workflow.update.mockResolvedValue({
+      id: 'wf-1',
+      userId: 'user-1',
+      trigger: TriggerType.ORDER_CREATED,
+    });
+
+    const result = await service.updateWorkflow(
+      'wf-1',
+      'user-1',
+      TriggerType.ORDER_CREATED,
+    );
+
+    expect(prismaMock.workflow.update).toHaveBeenCalledWith({
+      where: { id: 'wf-1' },
+      data: { trigger: TriggerType.ORDER_CREATED },
+    });
+    expect(result.trigger).toBe(TriggerType.ORDER_CREATED);
   });
 });

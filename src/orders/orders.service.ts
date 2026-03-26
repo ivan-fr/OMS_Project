@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { BusinessEventTypesEnum } from 'src/events/business-event.dto';
 import { BusinessEventPayloadDto } from 'src/events/business-event-payload.dto';
+import { TriggerType } from '@prisma/client';
 
 type CreateOrderInput = {
   amount: number;
@@ -25,8 +25,9 @@ export class OrdersService {
       },
     });
 
-    this.eventEmitter.emit(BusinessEventTypesEnum.ORDER_CREATED, {
-      eventType: BusinessEventTypesEnum.ORDER_CREATED,
+    // Émet l'événement métier pour déclencher les workflows.
+    this.eventEmitter.emit(TriggerType.ORDER_CREATED, {
+      eventType: TriggerType.ORDER_CREATED,
       data: {
         orderId: order.id,
         amount: order.amount,

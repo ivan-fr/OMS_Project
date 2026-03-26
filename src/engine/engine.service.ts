@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
 import { WorkflowMatcherService } from '../workflows/services/workflow-matcher.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { BusinessEventDto } from '../events/business-event.dto';
 import { BusinessEventPayloadDto } from '../events/business-event-payload.dto';
+import { Prisma, TriggerType, Workflow, WorkflowAction,  } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class EngineService {
@@ -12,6 +13,7 @@ export class EngineService {
   constructor(
     private readonly matcher: WorkflowMatcherService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly prisma: PrismaService,
   ) {}
 
   async receiveEvent(userId: string, dto: BusinessEventDto) {
@@ -20,9 +22,11 @@ export class EngineService {
       userId,
     );
 
+    const basePayload = dto.payload ?? {};
+
     // On injecte toujours le user du token.
     const payload: BusinessEventPayloadDto = {
-      ...(dto.payload ?? {}),
+      ...basePayload,
       userId,
     };
 
@@ -40,13 +44,13 @@ export class EngineService {
 
   @OnEvent('*')
   async handleBusinessEvent(payload: {
-    eventType: string;
+    eventType: TriggerType;
     data: BusinessEventPayloadDto;
   }) {
     const { eventType, data } = payload;
     this.logger.log(`Event received: "${eventType}"`);
 
-    // On limite la recherche au propriétaire quand possible.
+    // On limite la recherche au propriétaire pour éviter les fuites inter-users.
     const matchedWorkflows = await this.matcher.findMatchingWorkflows(
       eventType,
       data.userId,
@@ -58,11 +62,27 @@ export class EngineService {
     }
 
     for (const workflow of matchedWorkflows) {
-      this.logger.log(
-        `Triggering workflow "${workflow.name}" (id: ${workflow.id}) for event "${eventType}"`,
-      );
-      void data;
+      // Simulation de l'exécution du workflow.
+      await this.runWorkflow(workflow, data);
     }
   }
+
+   private async runWorkflow(workflow: Workflow, data: BusinessEventPayloadDto) {
+        // Logique pour exécuter les actions d'un workflow
+        const workflowActions = await this.prisma.workflowAction.findMany({
+            where: {
+                workflowId: workflow.id,
+            },
+        });
+        console.log(`Execution workflow avec L'ID : ${workflow.id}`);
+        for (const action of workflowActions) {
+            await this.runWorkflowAction(action);
+        }
+    }
+
+    private async runWorkflowAction(action : WorkflowAction) {
+        // Logique pour exécuter une action spécifique d'un workflow
+        console.log(`Execution action avec L'ID : ${action.id} et type : ${action.type}`);
+    }
 }
 

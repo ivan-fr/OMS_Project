@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
-import { BUSINESS_EVENT_TYPES, BusinessEventTypesEnum } from '../events/business-event.dto';
-import { Workflow } from '@prisma/client';
+import { BUSINESS_EVENT_TYPES } from '../events/business-event.dto';
 import { TriggerType } from '@prisma/client';
 
 @Injectable()
@@ -14,17 +13,17 @@ export class WorkflowsService {
 			data: {
 				name: dto.name,
 				isActive: dto.isActive ?? true,
-        condition: dto.condition,
+				condition: dto.condition,
 				userId,
-        // Trigger par défaut si non fourni.
-        trigger: dto.trigger ?? BusinessEventTypesEnum.MANUAL_TRIGGER
+				// Trigger par défaut si non fourni.
+				trigger: dto.trigger ?? TriggerType.MANUAL_TRIGGER,
 			},
 			select: {
 				id: true,
 				name: true,
 				isActive: true,
 				trigger: true,
-        condition: true,
+				condition: true,
 				userId: true,
 				createdAt: true,
 			},
@@ -45,14 +44,38 @@ export class WorkflowsService {
     });
   }
 
-  getAllowedTriggers(): string[] {
-    return [...BUSINESS_EVENT_TYPES];
+  getAllowedTriggers(): TriggerType[] {
+    return [...BUSINESS_EVENT_TYPES] as TriggerType[];
   }
 
-  async getWorkflowById(id: string) {
-    return this.prisma.workflow.findUnique({ where: { id } });
+  async getWorkflowById(id: string, userId: string) {
+    return this.prisma.workflow.findFirst({ where: { id, userId } });
   }
-  async updateWorkflow(id: string, data: any) {
-    return this.prisma.workflow.update({ where: { id }, data: data });
+
+  async updateWorkflow(id: string, _userId: string, trigger: TriggerType) {
+    // Le contrôle de propriété est déjà fait côté controller via getWorkflowById.
+    return this.prisma.workflow.update({
+      where: { id },
+      data: { trigger },
+    });
+  }
+
+  async assignTriggerToWorkflow(
+    workflowId: string,
+    userId: string,
+    trigger: TriggerType,
+  ) {
+    // Vérifie ownership + existence pour éviter la fuite de données.
+    const workflow = await this.getWorkflowById(workflowId, userId);
+
+    if (!workflow) {
+      throw new NotFoundException('Workflow not found');
+    }
+
+    if (!workflow.isActive) {
+      throw new BadRequestException('Workflow is not active');
+    }
+
+    return this.updateWorkflow(workflowId, userId, trigger);
   }
 }

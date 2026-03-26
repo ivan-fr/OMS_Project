@@ -7,10 +7,8 @@ import {
 	Post,
 	Req,
 	UseGuards,
-	BadRequestException,
-	NotFoundException,
 	Param,
-	Patch
+	Patch,
 } from '@nestjs/common';
 
 import {
@@ -22,14 +20,12 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { WorkflowsService } from './workflows.service';
-
-import { PrismaService } from '../prisma/prisma.service';
 import { UpdateTriggerDto } from './dto/updata-trigger.dto';
 
 @ApiTags('Workflows')
 @Controller('workflows')
 export class WorkflowsController {
-	constructor(private readonly prisma: PrismaService,private readonly workflowsService: WorkflowsService) {}
+	constructor(private readonly workflowsService: WorkflowsService) {}
 
 	@Post()
 	@UseGuards(JwtAuthGuard)
@@ -69,17 +65,21 @@ export class WorkflowsController {
 		return this.workflowsService.getAllowedTriggers();
 	}
 
-    @Patch(':id/trigger')
-    async triggerworkflow(@Param('id') id: string, @Body() updateTriggerValueToUpdate: UpdateTriggerDto) {
-        // Implementation Ajout d'un trigger à un workflow
-        const workflow = await this.workflowsService.getWorkflowById(id);
-
-        if (!workflow || workflow === null) throw new NotFoundException();
-        if (!workflow.isActive) {
-            throw new BadRequestException("Workflow is not active");
-        }else{
-            const updatedWorkflow = await this.workflowsService.updateWorkflow(id, {trigger:updateTriggerValueToUpdate.trigger});
-            return updatedWorkflow;
-        }
-    }
+	@Patch(':id/trigger')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Associer un trigger à un workflow (US06)' })
+	@ApiBody({ type: UpdateTriggerDto })
+	async triggerworkflow(
+		@Req() req: { user: { sub: string } },
+		@Param('id') id: string,
+		@Body() updateTriggerValueToUpdate: UpdateTriggerDto,
+	) {
+		// Controller fin: la logique métier reste dans le service.
+		return this.workflowsService.assignTriggerToWorkflow(
+			id,
+			req.user.sub,
+			updateTriggerValueToUpdate.trigger,
+		);
+	}
 }
