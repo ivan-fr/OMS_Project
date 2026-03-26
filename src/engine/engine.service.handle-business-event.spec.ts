@@ -2,10 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EngineService } from './engine.service';
 import { WorkflowMatcherService } from '../workflows/services/workflow-matcher.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
 import { WorkflowConditionService } from './services/workflow-condition.service';
 import { AppLogHelperService } from '../appLog/app-log-helper.service';
+import { OrdersRepository } from '../repositories/orders.repository';
+import { WorkflowsRepository } from '../repositories/workflows.repository';
+import { WorkflowExecutionsRepository } from '../repositories/workflow-executions.repository';
 
 describe('EngineService - handleBusinessEvent', () => {
   let service: EngineService;
@@ -18,12 +20,6 @@ describe('EngineService - handleBusinessEvent', () => {
     const mockEventEmitter = {
       emit: jest.fn(),
     };
-    const mockPrisma = {
-      appLog: { create: jest.fn() },
-      workflowExecution: { create: jest.fn().mockResolvedValue({ id: 'exec-1' }), update: jest.fn() },
-      workflowAction: { findMany: jest.fn().mockResolvedValue([]) },
-      actionExecution: { create: jest.fn(), update: jest.fn() },
-    };
     const mockActionExecutor = {
       executeAction: jest.fn(),
     };
@@ -35,6 +31,18 @@ describe('EngineService - handleBusinessEvent', () => {
       warning: jest.fn(),
       error: jest.fn(),
       getLogsForUser: jest.fn(),
+    };
+    const mockOrdersRepository = {
+      countPaidByUser: jest.fn(),
+    };
+    const mockWorkflowsRepository = {
+      findActionsByWorkflowOrdered: jest.fn(),
+    };
+    const mockWorkflowExecutionsRepository = {
+      createWorkflowExecution: jest.fn(),
+      updateWorkflowExecutionStatus: jest.fn(),
+      createActionExecution: jest.fn(),
+      updateActionExecutionStatus: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -49,10 +57,6 @@ describe('EngineService - handleBusinessEvent', () => {
           useValue: mockEventEmitter,
         },
         {
-          provide: PrismaService,
-          useValue: mockPrisma,
-        },
-        {
           provide: ActionExecutorService,
           useValue: mockActionExecutor,
         },
@@ -63,6 +67,18 @@ describe('EngineService - handleBusinessEvent', () => {
         {
           provide: AppLogHelperService,
           useValue: mockAppLogHelperService,
+        },
+        {
+          provide: OrdersRepository,
+          useValue: mockOrdersRepository,
+        },
+        {
+          provide: WorkflowsRepository,
+          useValue: mockWorkflowsRepository,
+        },
+        {
+          provide: WorkflowExecutionsRepository,
+          useValue: mockWorkflowExecutionsRepository,
         },
       ],
     }).compile();
