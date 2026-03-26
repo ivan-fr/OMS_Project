@@ -82,5 +82,27 @@ describe('EngineService', () => {
     });
   });
 
+  describe('handleBusinessEvent', () => {
+    it('doit arrêter le traitement si aucun workflow ne correspond', async () => {
+      matcherService.findMatchingWorkflows.mockResolvedValue([]);
 
+      jest.spyOn(service as any, 'writeAppLog').mockResolvedValue(undefined);
+      const spyLogger = jest.spyOn(service['logger'], 'warn').mockImplementation();
+
+      await service.handleBusinessEvent({
+        eventType: 'ORDER_CREATED' as any,
+        data: { userId: 'u1' },
+      });
+
+      expect(matcherService.findMatchingWorkflows).toHaveBeenCalledWith(
+        'ORDER_CREATED',
+        'u1'
+      );
+      expect(spyLogger).toHaveBeenCalledWith(
+        expect.stringContaining('No active workflow found')
+      );
+      
+      spyLogger.mockRestore();
+    });
+  });
 });
