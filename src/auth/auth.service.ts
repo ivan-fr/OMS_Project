@@ -4,14 +4,12 @@ import { RegisterDto } from './dto/register.dto';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class AuthService {
 	constructor(
 		private readonly usersService: UsersService,
 		private readonly jwtService: JwtService,
-		private readonly eventEmitter: EventEmitter2,
 	) {}
 
 	async register(dto: RegisterDto) {
