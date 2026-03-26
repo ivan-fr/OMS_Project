@@ -133,12 +133,16 @@ export class EngineService {
       },
     });
 
+    this.logger.log(`Starting action: ${action.type}`);
+
     try {
       const result = await this.actionExecutor.executeAction(
         workflowExecutionId,
         action,
         data,
       );
+
+      this.logger.log(`Action ${action.type} succeeded`);
 
       await this.prisma.actionExecution.update({
         where: { id: actionExecution.id },
@@ -149,6 +153,8 @@ export class EngineService {
         },
       });
     } catch (error) {
+      this.logger.error(`Action ${action.type} failed`, String(error));
+
       await this.prisma.actionExecution.update({
         where: { id: actionExecution.id },
         data: {
