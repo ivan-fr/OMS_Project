@@ -3,7 +3,6 @@ import { EngineController } from './engine.controller';
 import { EngineService } from './engine.service';
 import { AuthModule } from '../auth/auth.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
-import { PrismaModule } from '../prisma/prisma.module';
 import { ActionExecutorService } from './actions/action-executor.service';
 import { NotifyAdminHandler } from './actions/handlers/notify-admin.handler';
 import { NotifyUserHandler } from './actions/handlers/notify-user.handler';
@@ -14,9 +13,10 @@ import { CallWebhookHandler } from './actions/handlers/call-webhook.handler';
 import { LogsController } from './logs.controller';
 import { WorkflowConditionService } from './services/workflow-condition.service';
 import { AppLogModule } from '../appLog/app-log.module';
+import { RepositoriesModule } from '../repositories/repositories.module';
 
 @Module({
-  imports: [AuthModule, WorkflowsModule, PrismaModule, AppLogModule],
+  imports: [AuthModule, WorkflowsModule, RepositoriesModule, AppLogModule],
   controllers: [EngineController, LogsController],
   providers: [
     EngineService,

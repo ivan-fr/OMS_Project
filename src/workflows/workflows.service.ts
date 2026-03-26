@@ -3,15 +3,15 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { BUSINESS_EVENT_TYPES } from '../events/business-event.dto';
 import { TriggerType } from '@prisma/client';
 import { CreateActionDto } from './dto/create-action.dto';
+import { WorkflowsRepository } from '../repositories/workflows.repository';
 
 @Injectable()
 export class WorkflowsService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(private readonly workflowsRepository: WorkflowsRepository) {}
 
     async addActionToWorkflow(
       workflowId: string,
@@ -29,85 +29,23 @@ export class WorkflowsService {
         throw new BadRequestException('Workflow is not active');
       }
 
-      return this.prisma.workflow.update({
-        where: { id: workflowId },
-        data: {
-          actions: {
-            deleteMany: {},
-            create: body.map((actionDto) => ({
-              type: actionDto.type,
-              config: actionDto.config,
-              order: actionDto.order,
-            })),
-          },
-        },
-      });
+      return this.workflowsRepository.replaceActions(workflowId, body);
     }
 
 	create(userId: string, dto: CreateWorkflowDto) {
-		return this.prisma.workflow.create({
-			data: {
-				name: dto.name,
-				isActive: dto.isActive ?? true,
-				condition: dto.condition,
-				userId,
-				// Trigger par défaut si non fourni.
-				trigger: dto.trigger ?? TriggerType.MANUAL_TRIGGER,
-			},
-			select: {
-				id: true,
-				name: true,
-				isActive: true,
-				trigger: true,
-        condition: true,
-				userId: true,
-				createdAt: true,
-			},
-		});
+		return this.workflowsRepository.createWorkflow(userId, dto);
 	}
 
   findAll(userId: string) {
-    return this.prisma.workflow.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.workflowsRepository.findAllByUser(userId);
   }
 
   findActive(userId: string) {
-    return this.prisma.workflow.findMany({
-      where: { userId, isActive: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.workflowsRepository.findActiveByUser(userId);
   }
 
   findExecutions(userId: string) {
-    return this.prisma.workflowExecution.findMany({
-      where: {
-        workflow: { userId },
-      },
-      orderBy: { startedAt: 'desc' },
-      include: {
-        workflow: {
-          select: {
-            id: true,
-            name: true,
-            trigger: true,
-          },
-        },
-        actionExecutions: {
-          orderBy: { startedAt: 'asc' },
-          select: {
-            id: true,
-            actionType: true,
-            status: true,
-            message: true,
-            startedAt: true,
-            finishedAt: true,
-          },
-        },
-      },
-      take: 50,
-    });
+    return this.workflowsRepository.findExecutionsByUser(userId);
   }
 
   async findExecutionsByWorkflow(workflowId: string, userId: string) {
@@ -117,34 +55,7 @@ export class WorkflowsService {
       throw new NotFoundException('Workflow not found');
     }
 
-    return this.prisma.workflowExecution.findMany({
-      where: {
-        workflowId,
-        workflow: { userId },
-      },
-      orderBy: { startedAt: 'desc' },
-      include: {
-        workflow: {
-          select: {
-            id: true,
-            name: true,
-            trigger: true,
-          },
-        },
-        actionExecutions: {
-          orderBy: { startedAt: 'asc' },
-          select: {
-            id: true,
-            actionType: true,
-            status: true,
-            message: true,
-            startedAt: true,
-            finishedAt: true,
-          },
-        },
-      },
-      take: 50,
-    });
+    return this.workflowsRepository.findExecutionsByWorkflow(workflowId, userId);
   }
 
   getAllowedTriggers(): TriggerType[] {
@@ -152,15 +63,12 @@ export class WorkflowsService {
   }
 
   async getWorkflowById(id: string, userId: string) {
-    return this.prisma.workflow.findFirst({ where: { id, userId } });
+    return this.workflowsRepository.findByIdForUser(id, userId);
   }
 
   async updateWorkflow(id: string, _userId: string, trigger: TriggerType) {
     // Le contrôle de propriété est déjà fait côté controller via getWorkflowById.
-    return this.prisma.workflow.update({
-      where: { id },
-      data: { trigger },
-    });
+    return this.workflowsRepository.updateTrigger(id, trigger);
   }
 
   async assignTriggerToWorkflow(

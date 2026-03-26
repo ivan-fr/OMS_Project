@@ -10,10 +10,12 @@ import {
   Workflow,
   WorkflowAction,
 } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
 import { WorkflowConditionService } from './services/workflow-condition.service';
 import { AppLogHelperService } from '../appLog/app-log-helper.service';
+import { OrdersRepository } from '../repositories/orders.repository';
+import { WorkflowsRepository } from '../repositories/workflows.repository';
+import { WorkflowExecutionsRepository } from '../repositories/workflow-executions.repository';
 
 @Injectable()
 export class EngineService {
@@ -22,10 +24,12 @@ export class EngineService {
   constructor(
     private readonly matcher: WorkflowMatcherService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly prisma: PrismaService,
     private readonly actionExecutor: ActionExecutorService,
     private readonly workflowConditionService: WorkflowConditionService,
     private readonly appLogHelper: AppLogHelperService,
+    private readonly ordersRepository: OrdersRepository,
+    private readonly workflowsRepository: WorkflowsRepository,
+    private readonly workflowExecutionsRepository: WorkflowExecutionsRepository,
   ) {}
 
 
@@ -69,10 +73,17 @@ export class EngineService {
       userId: data.userId,
       payload: data,
     });
+    if (eventType === TriggerType.ORDER_NUM) {
+      // Cas BONUS pour ORDER_NUM: on veut enregistrer dans les log le nombre total de commandes déjà payées périodiquement.
+      const orderCount = await this.ordersRepository.countPaidByUser(data.userId);
 
-
-
-    if(eventType !== TriggerType.ORDER_NUM){
+      await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
+        eventType,
+        userId: payload.data.userId,
+        orderCount,
+      });
+      return;
+    }
 
     // On limite la recherche au propriétaire pour éviter les fuites inter-users.
     const matchedWorkflows = await this.matcher.findMatchingWorkflows(
@@ -117,18 +128,6 @@ export class EngineService {
       // Orchestration workflow par workflow.
       await this.runWorkflow(workflow, data);
     }
-    }else{
-      // Cas BONUS pour ORDER_NUM: on veut enregistrer dans les log le nombre total de commandes déjà payées périodiquement.
-      const orderCount = await this.prisma.order.count({
-        where: { status: 'paid', userId: data.userId },
-      });
-   
-      await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
-        eventType,
-        userId: payload.data.userId,
-        orderCount,
-      });
-    }
 
   }
 
@@ -136,13 +135,10 @@ export class EngineService {
 
   private async runWorkflow(workflow: Workflow, data: BusinessEventPayloadDto) {
     // Trace globale de l'exécution du workflow.
-    const execution = await this.prisma.workflowExecution.create({
-      data: {
-        workflowId: workflow.id,
-        eventType: workflow.trigger,
-        status: 'running',
-        payload: data as unknown as Prisma.InputJsonValue,
-      },
+    const execution = await this.workflowExecutionsRepository.createWorkflowExecution({
+      workflowId: workflow.id,
+      eventType: workflow.trigger,
+      payload: data as unknown as Prisma.InputJsonValue,
     });
 
     this.logger.log(`Starting workflow execution: ${workflow.id}`);
@@ -155,19 +151,16 @@ export class EngineService {
 
     try {
       // Exécution séquentielle des actions (order ASC).
-      const workflowActions = await this.prisma.workflowAction.findMany({
-        where: { workflowId: workflow.id },
-        orderBy: { order: 'asc' },
-      });
+      const workflowActions = await this.workflowsRepository.findActionsByWorkflowOrdered(workflow.id);
 
       for (const action of workflowActions) {
         await this.runWorkflowAction(execution.id, action, data);
       }
 
-      await this.prisma.workflowExecution.update({
-        where: { id: execution.id },
-        data: { status: 'success', finishedAt: new Date() },
-      });
+      await this.workflowExecutionsRepository.updateWorkflowExecutionStatus(
+        execution.id,
+        'success',
+      );
 
       this.logger.log(`Workflow ${workflow.id} executed with success`);
       await this.appLogHelper.info(
@@ -180,10 +173,10 @@ export class EngineService {
       );
     } catch (error) {
       // Si une action échoue, le workflow passe en erreur.
-      await this.prisma.workflowExecution.update({
-        where: { id: execution.id },
-        data: { status: 'error', finishedAt: new Date() },
-      });
+      await this.workflowExecutionsRepository.updateWorkflowExecutionStatus(
+        execution.id,
+        'error',
+      );
 
       const stackOrMessage =
         error instanceof Error ? error.stack ?? error.message : String(error);
@@ -203,13 +196,11 @@ export class EngineService {
     data: BusinessEventPayloadDto,
   ) {
     // Trace granulaire: une ligne par action.
-    const actionExecution = await this.prisma.actionExecution.create({
-      data: {
+    const actionExecution =
+      await this.workflowExecutionsRepository.createActionExecution(
         workflowExecutionId,
-        actionType: action.type as ActionType,
-        status: 'running',
-      },
-    });
+        action.type as ActionType,
+      );
 
     this.logger.log(`Starting action: ${action.type}`);
     await this.appLogHelper.info(`Starting action: ${action.type}`, {
@@ -237,13 +228,10 @@ export class EngineService {
         result,
       });
 
-      await this.prisma.actionExecution.update({
-        where: { id: actionExecution.id },
-        data: {
-          status: 'success',
-          message: result,
-          finishedAt: new Date(),
-        },
+      await this.workflowExecutionsRepository.updateActionExecutionStatus({
+        actionExecutionId: actionExecution.id,
+        status: 'success',
+        message: result,
       });
     } catch (error) {
       this.logger.error(`Action ${action.type} failed`, String(error));
@@ -256,13 +244,10 @@ export class EngineService {
         error: String(error),
       });
 
-      await this.prisma.actionExecution.update({
-        where: { id: actionExecution.id },
-        data: {
-          status: 'error',
-          message: String(error),
-          finishedAt: new Date(),
-        },
+      await this.workflowExecutionsRepository.updateActionExecutionStatus({
+        actionExecutionId: actionExecution.id,
+        status: 'error',
+        message: String(error),
       });
 
       // On remonte l'erreur pour marquer le workflow en échec.

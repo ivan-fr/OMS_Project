@@ -1,20 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BusinessEventPayloadDto } from 'src/events/business-event-payload.dto';
+import { BusinessEventPayloadDto } from '../events/business-event-payload.dto';
 import { TriggerType } from '@prisma/client';
+import { OrdersRepository } from '../repositories/orders.repository';
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService, private readonly eventEmitter: EventEmitter2,) {}
+  constructor(
+    private readonly ordersRepository: OrdersRepository,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create(dto: CreateOrderDto, userId: string) {
-    const order = await this.prisma.order.create({
-      data: {
-        amount: dto.amount,
-        status: 'created',
-        userId,
-      },
+    const order = await this.ordersRepository.createOrder({
+      amount: dto.amount,
+      status: 'created',
+      userId,
     });
 
         // Émet l'événement métier pour déclencher les workflows.
@@ -31,9 +32,6 @@ export class OrdersService {
   }
 
   async findByUser(userId: string) {
-    return this.prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.ordersRepository.findByUser(userId);
   }
 }

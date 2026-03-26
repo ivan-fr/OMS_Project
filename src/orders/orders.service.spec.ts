@@ -1,18 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TriggerType } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { OrdersRepository } from '../repositories/orders.repository';
 
 describe('OrdersService', () => {
   let service: OrdersService;
 
-  const prismaMock = {
-    order: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-    },
+  const ordersRepositoryMock = {
+    createOrder: jest.fn(),
+    findByUser: jest.fn(),
   };
 
   const eventEmitterMock = {
@@ -25,7 +23,7 @@ describe('OrdersService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
-        { provide: PrismaService, useValue: prismaMock },
+        { provide: OrdersRepository, useValue: ordersRepositoryMock },
         { provide: EventEmitter2, useValue: eventEmitterMock },
       ],
     }).compile();
@@ -41,19 +39,17 @@ describe('OrdersService', () => {
       userId: 'u1',
     };
 
-    prismaMock.order.create.mockResolvedValue(mockOrder);
+    ordersRepositoryMock.createOrder.mockResolvedValue(mockOrder);
 
     const dto: CreateOrderDto = { amount: 100 };
     const userId = 'u1';
 
     const result = await service.create(dto, userId);
 
-    expect(prismaMock.order.create).toHaveBeenCalledWith({
-      data: {
+    expect(ordersRepositoryMock.createOrder).toHaveBeenCalledWith({
         amount: dto.amount,
         status: 'created',
         userId,
-      },
     });
 
     expect(eventEmitterMock.emit).toHaveBeenCalledWith(
@@ -77,14 +73,11 @@ describe('OrdersService', () => {
       { id: 'o1', amount: 100, userId: 'u1' },
     ];
 
-    prismaMock.order.findMany.mockResolvedValue(mockOrders);
+    ordersRepositoryMock.findByUser.mockResolvedValue(mockOrders);
 
     const result = await service.findByUser('u1');
 
-    expect(prismaMock.order.findMany).toHaveBeenCalledWith({
-      where: { userId: 'u1' },
-      orderBy: { createdAt: 'desc' },
-    });
+    expect(ordersRepositoryMock.findByUser).toHaveBeenCalledWith('u1');
 
     expect(result).toEqual(mockOrders);
   });

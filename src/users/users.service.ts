@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TriggerType } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-import { BusinessEventPayloadDto } from 'src/events/business-event-payload.dto';
+import { BusinessEventPayloadDto } from '../events/business-event-payload.dto';
+import { UsersRepository } from '../repositories/users.repository';
 
 type CreateUserInput = {
   email: string;
@@ -12,26 +12,16 @@ type CreateUserInput = {
 @Injectable()
 export class UsersService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly usersRepository: UsersRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
   findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
+    return this.usersRepository.findByEmail(email);
   }
 
   async create(input: CreateUserInput) {
-    const user = await this.prisma.user.create({
-      data: {
-        email: input.email,
-        passwordHash: input.passwordHash,
-      },
-      select: {
-        id: true,
-        email: true,
-        createdAt: true,
-      },
-    });
+    const user = await this.usersRepository.createUser(input);
 
     // Émet l'événement d'inscription pour les workflows.
     this.eventEmitter.emit(TriggerType.USER_REGISTERED, {
