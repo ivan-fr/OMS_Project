@@ -34,4 +34,10 @@ export class OrdersRepository {
       where: { status: 'paid', userId },
     });
   }
+
+  countPaidTotal() {
+    return this.prisma.order.count({
+      where: { status: 'paid' },
+    });
+  }
 }

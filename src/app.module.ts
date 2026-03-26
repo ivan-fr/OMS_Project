@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
@@ -12,6 +11,7 @@ import { EngineModule } from './engine/engine.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserRegisteredListener } from './events/user-registered.listener';
 import { AppLogModule } from './appLog/app-log.module';
+import { WorkflowScheduler } from './scheduler/workflow-scheduler';
 
 @Module({
   imports: [
@@ -22,12 +22,6 @@ import { AppLogModule } from './appLog/app-log.module';
     EngineModule,
     PrismaModule,
     AppLogModule,
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: Number.parseInt(process.env.REDIS_PORT || '6379', 10),
-      },
-    }),
     EventEmitterModule.forRoot({
       wildcard: true,
     }),
@@ -37,6 +31,7 @@ import { AppLogModule } from './appLog/app-log.module';
   providers: [
     AppService,
     UserRegisteredListener,
+    WorkflowScheduler,
   ],
 })
 export class AppModule {}

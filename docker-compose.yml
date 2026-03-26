@@ -14,11 +14,7 @@ services:
       - .env
     environment:
       - DATABASE_URL=${DATABASE_URL:-mongodb://mongo:27017/oms_db?replicaSet=rs0}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
       - JWT_SECRET=${JWT_SECRET:-super_secret_key_for_jwt}
-    depends_on:
-      - redis
     restart: unless-stopped
     networks:
       - oms-network
@@ -53,19 +49,8 @@ services:
     networks:
       - oms-network
 
-  redis:
-    image: redis:7.2-alpine
-    container_name: nestjs-oms-redis
-    ports:
-      - '6380:6379'
-    volumes:
-      - redis-data:/data
-    networks:
-      - oms-network
-
 volumes:
   mongo-data:
-  redis-data:
 
 networks:
   oms-network:

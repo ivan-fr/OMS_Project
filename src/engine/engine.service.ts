@@ -73,33 +73,24 @@ export class EngineService {
       payload: data,
     });
     if (eventType === TriggerType.ORDER_NUM) {
-      // Cas BONUS pour ORDER_NUM: on veut enregistrer dans les log le nombre total de commandes déjà payées périodiquement.
-      this.logger.log(`[ORDER_NUM] Processing ORDER_NUM event for userId: ${data.userId}`);
-      
-      if (!data.userId) {
-        this.logger.warn(`[ORDER_NUM] Missing userId in ORDER_NUM event payload`);
-        await this.appLogHelper.warning('ORDER_NUM event received without userId', {
-          eventType,
-          payload: data,
-        });
-        return;
-      }
+      // Cas BONUS global: total de toutes les commandes payées (tous users confondus).
+      this.logger.log('[ORDER_NUM] Processing global ORDER_NUM event');
 
       try {
-        const orderCount = await this.ordersRepository.countPaidByUser(data.userId);
-        this.logger.log(`[ORDER_NUM] User ${data.userId} has ${orderCount} paid orders`);
+        const orderCount = await this.ordersRepository.countPaidTotal();
+        this.logger.log(`[ORDER_NUM] Total paid orders (all users): ${orderCount}`);
 
         await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
           eventType,
-          userId: data.userId,
+          scope: 'global',
           orderCount,
         });
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        this.logger.error(`[ORDER_NUM] Failed to count orders for userId ${data.userId}: ${errorMsg}`);
+        this.logger.error(`[ORDER_NUM] Failed to count global paid orders: ${errorMsg}`);
         await this.appLogHelper.error(`Failed to process ORDER_NUM event`, {
           eventType,
-          userId: data.userId,
+          scope: 'global',
           error: errorMsg,
         });
       }
