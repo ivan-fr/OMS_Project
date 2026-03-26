@@ -10,6 +10,7 @@ import { NotifyUserHandler } from './actions/handlers/notify-user.handler';
 import { CreateLogHandler } from './actions/handlers/create-log.handler';
 import { CreateTaskHandler } from './actions/handlers/create-task.handler';
 import { UpdateStatusHandler } from './actions/handlers/update-status.handler';
+import { CallWebhookHandler } from './actions/handlers/call-webhook.handler';
 import { LogsController } from './logs.controller';
 import { WorkflowConditionService } from './services/workflow-condition.service';
 import { AppLogModule } from '../appLog/app-log.module';
@@ -26,6 +27,7 @@ import { AppLogModule } from '../appLog/app-log.module';
     CreateLogHandler,
     CreateTaskHandler,
     UpdateStatusHandler,
+    CallWebhookHandler,
   ],
 })
 export class EngineModule {}
