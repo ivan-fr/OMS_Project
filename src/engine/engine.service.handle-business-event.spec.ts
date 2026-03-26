@@ -5,6 +5,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
 import { WorkflowConditionService } from './services/workflow-condition.service';
+import { AppLogHelperService } from '../appLog/app-log-helper.service';
 
 describe('EngineService - handleBusinessEvent', () => {
   let service: EngineService;
@@ -28,6 +29,12 @@ describe('EngineService - handleBusinessEvent', () => {
     };
     const mockWorkflowConditionService = {
       evaluate: jest.fn().mockReturnValue(true),
+    };
+    const mockAppLogHelperService = {
+      info: jest.fn(),
+      warning: jest.fn(),
+      error: jest.fn(),
+      getLogsForUser: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -53,17 +60,20 @@ describe('EngineService - handleBusinessEvent', () => {
           provide: WorkflowConditionService,
           useValue: mockWorkflowConditionService,
         },
+        {
+          provide: AppLogHelperService,
+          useValue: mockAppLogHelperService,
+        },
       ],
     }).compile();
 
     service = module.get<EngineService>(EngineService);
-    matcherService = module.get(WorkflowMatcherService) as any;
+    matcherService = module.get(WorkflowMatcherService);
   });
 
   it('doit arrêter le traitement si aucun workflow ne correspond', async () => {
     matcherService.findMatchingWorkflows.mockResolvedValue([]);
 
-    jest.spyOn(service as any, 'writeAppLog').mockResolvedValue(undefined);
     const spyLogger = jest.spyOn(service['logger'], 'warn').mockImplementation();
 
     await service.handleBusinessEvent({

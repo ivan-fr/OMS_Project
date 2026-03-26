@@ -12,9 +12,10 @@ import { CreateTaskHandler } from './actions/handlers/create-task.handler';
 import { UpdateStatusHandler } from './actions/handlers/update-status.handler';
 import { LogsController } from './logs.controller';
 import { WorkflowConditionService } from './services/workflow-condition.service';
+import { AppLogModule } from '../appLog/app-log.module';
 
 @Module({
-  imports: [AuthModule, WorkflowsModule, PrismaModule],
+  imports: [AuthModule, WorkflowsModule, PrismaModule, AppLogModule],
   controllers: [EngineController, LogsController],
   providers: [
     EngineService,
