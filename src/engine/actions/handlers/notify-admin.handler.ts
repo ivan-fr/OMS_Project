@@ -1,24 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { ActionType } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { ActionHandler } from '../action-handler.interface';
 import { ActionExecutionContext } from '../action-context.type';
+import { AppLogHelperService } from '../../../appLog/app-log-helper.service';
 
 @Injectable()
 export class NotifyAdminHandler implements ActionHandler {
   readonly type = ActionType.NOTIFY_ADMIN;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly appLogHelper: AppLogHelperService) {}
 
   async execute(context: ActionExecutionContext): Promise<string> {
     // MVP: une notification admin est tracée dans AppLog.
-    await this.prisma.appLog.create({
-      data: {
-        level: 'info',
-        message: `Admin notified for workflow ${context.action.workflowId}`,
-        context: context.payload as unknown as object,
-      },
-    });
+    await this.appLogHelper.info(
+      `Admin notified for workflow ${context.action.workflowId}`,
+      context.payload as unknown as Record<string, unknown>,
+    );
 
     return 'admin notified';
   }

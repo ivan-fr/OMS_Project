@@ -5,6 +5,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
 import { WorkflowConditionService } from './services/workflow-condition.service';
+import { AppLogHelperService } from '../appLog/app-log-helper.service';
 
 describe('EngineService - receiveEvent', () => {
   let service: EngineService;
@@ -30,6 +31,12 @@ describe('EngineService - receiveEvent', () => {
     const mockWorkflowConditionService = {
       evaluate: jest.fn().mockReturnValue(true),
     };
+    const mockAppLogHelperService = {
+      info: jest.fn(),
+      warning: jest.fn(),
+      error: jest.fn(),
+      getLogsForUser: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,12 +61,16 @@ describe('EngineService - receiveEvent', () => {
           provide: WorkflowConditionService,
           useValue: mockWorkflowConditionService,
         },
+        {
+          provide: AppLogHelperService,
+          useValue: mockAppLogHelperService,
+        },
       ],
     }).compile();
 
     service = module.get<EngineService>(EngineService);
     eventEmitter = module.get<EventEmitter2>(EventEmitter2);
-    matcherService = module.get(WorkflowMatcherService) as any;
+    matcherService = module.get(WorkflowMatcherService);
   });
 
   it('doit sécuriser le payload en forçant le userId du token', async () => {

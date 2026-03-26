@@ -1,24 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { ActionType } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { ActionHandler } from '../action-handler.interface';
 import { ActionExecutionContext } from '../action-context.type';
+import { AppLogHelperService } from '../../../appLog/app-log-helper.service';
 
 @Injectable()
 export class CreateLogHandler implements ActionHandler {
   readonly type = ActionType.CREATE_LOG;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly appLogHelper: AppLogHelperService) {}
 
   async execute(context: ActionExecutionContext): Promise<string> {
     // Crée une trace applicative de l'action.
-    await this.prisma.appLog.create({
-      data: {
-        level: 'info',
-        message: `Workflow action CREATE_LOG (${context.action.id})`,
-        context: context.payload as unknown as object,
-      },
-    });
+    await this.appLogHelper.info(
+      `Workflow action CREATE_LOG (${context.action.id})`,
+      context.payload as unknown as Record<string, unknown>,
+    );
 
     return 'log created';
   }

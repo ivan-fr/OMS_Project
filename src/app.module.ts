@@ -11,6 +11,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
 import { EngineModule } from './engine/engine.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserRegisteredListener } from './events/user-registered.listener';
+import { AppLogModule } from './appLog/app-log.module';
 
 @Module({
   imports: [
@@ -20,10 +21,11 @@ import { UserRegisteredListener } from './events/user-registered.listener';
     WorkflowsModule,
     EngineModule,
     PrismaModule,
+    AppLogModule,
     BullModule.forRoot({
       connection: {
         host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        port: Number.parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
     EventEmitterModule.forRoot(),

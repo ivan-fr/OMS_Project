@@ -13,7 +13,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionExecutorService } from './actions/action-executor.service';
 import { WorkflowConditionService } from './services/workflow-condition.service';
-import { CreateAppLogDto } from 'src/appLog/dto/app-log.dto';
+import { AppLogHelperService } from '../appLog/app-log-helper.service';
 
 @Injectable()
 export class EngineService {
@@ -25,6 +25,7 @@ export class EngineService {
     private readonly prisma: PrismaService,
     private readonly actionExecutor: ActionExecutorService,
     private readonly workflowConditionService: WorkflowConditionService,
+    private readonly appLogHelper: AppLogHelperService,
   ) {}
 
 
@@ -63,11 +64,13 @@ export class EngineService {
   }) {
     const { eventType, data } = payload;
     this.logger.log(`Event received: "${eventType}"`);
-    await this.writeAppLog('info', `Event received: "${eventType}"`, {
+    await this.appLogHelper.info(`Event received: "${eventType}"`, {
       eventType,
       userId: data.userId,
       payload: data,
     });
+
+
 
     if(eventType !== TriggerType.ORDER_NUM){
 
@@ -79,8 +82,7 @@ export class EngineService {
 
     if (matchedWorkflows.length === 0) {
       this.logger.warn(`No active workflow found for event "${eventType}"`);
-      await this.writeAppLog(
-        'warning',
+      await this.appLogHelper.warning(
         `No active workflow found for event "${eventType}"`,
         {
           eventType,
@@ -100,8 +102,7 @@ export class EngineService {
         this.logger.log(
           `Workflow ${workflow.id} ignored: condition not satisfied`,
         );
-        await this.writeAppLog(
-          'info',
+        await this.appLogHelper.info(
           `Workflow ${workflow.id} ignored: condition not satisfied`,
           {
             workflowId: workflow.id,
@@ -121,19 +122,17 @@ export class EngineService {
       const orderCount = await this.prisma.order.count({
         where: { status: 'paid' },
       });
-      let log: CreateAppLogDto = {
-        level: 'info',
-        message: `Total de commandes déjà payées est : ${orderCount}`,
-      };
-
-      await this.appLogCreate(log);
+   
+      await this.appLogHelper.info(`Total de commandes déjà payées est : ${orderCount}`, {
+        eventType,
+        userId: payload.data.userId,
+        orderCount,
+      });
     }
 
   }
 
-  private async appLogCreate(log: CreateAppLogDto) {
-    await this.prisma.appLog.create({ data: log });
-  }
+
 
   private async runWorkflow(workflow: Workflow, data: BusinessEventPayloadDto) {
     // Trace globale de l'exécution du workflow.
@@ -147,7 +146,7 @@ export class EngineService {
     });
 
     this.logger.log(`Starting workflow execution: ${workflow.id}`);
-    await this.writeAppLog('info', `Starting workflow execution: ${workflow.id}`, {
+    await this.appLogHelper.info(`Starting workflow execution: ${workflow.id}`, {
       workflowId: workflow.id,
       trigger: workflow.trigger,
       userId: data.userId,
@@ -171,8 +170,7 @@ export class EngineService {
       });
 
       this.logger.log(`Workflow ${workflow.id} executed with success`);
-      await this.writeAppLog(
-        'info',
+      await this.appLogHelper.info(
         `Workflow ${workflow.id} executed with success`,
         {
           workflowId: workflow.id,
@@ -190,7 +188,7 @@ export class EngineService {
       const stackOrMessage =
         error instanceof Error ? error.stack ?? error.message : String(error);
       this.logger.error(`Workflow ${workflow.id} failed`, stackOrMessage);
-      await this.writeAppLog('error', `Workflow ${workflow.id} failed`, {
+      await this.appLogHelper.error(`Workflow ${workflow.id} failed`, {
         workflowId: workflow.id,
         workflowExecutionId: execution.id,
         userId: data.userId,
@@ -214,7 +212,7 @@ export class EngineService {
     });
 
     this.logger.log(`Starting action: ${action.type}`);
-    await this.writeAppLog('info', `Starting action: ${action.type}`, {
+    await this.appLogHelper.info(`Starting action: ${action.type}`, {
       workflowExecutionId,
       actionExecutionId: actionExecution.id,
       actionType: action.type,
@@ -230,7 +228,7 @@ export class EngineService {
       );
 
       this.logger.log(`Action ${action.type} succeeded`);
-      await this.writeAppLog('info', `Action ${action.type} succeeded`, {
+      await this.appLogHelper.info(`Action ${action.type} succeeded`, {
         workflowExecutionId,
         actionExecutionId: actionExecution.id,
         actionType: action.type,
@@ -249,7 +247,7 @@ export class EngineService {
       });
     } catch (error) {
       this.logger.error(`Action ${action.type} failed`, String(error));
-      await this.writeAppLog('error', `Action ${action.type} failed`, {
+      await this.appLogHelper.error(`Action ${action.type} failed`, {
         workflowExecutionId,
         actionExecutionId: actionExecution.id,
         actionType: action.type,
@@ -271,51 +269,5 @@ export class EngineService {
       throw error;
     }
   }
-
-
-
-
-
-  // HELPER POUR LOGGING STRUCTURÉ ET PERSISTANT
-  private async writeAppLog(
-    level: 'info' | 'warning' | 'error',
-    message: string,
-    context?: Record<string, unknown>,
-  ) {
-    try {
-      await this.prisma.appLog.create({
-        data: {
-          level,
-          message,
-          context: context
-            ? (context as unknown as Prisma.InputJsonValue)
-            : undefined,
-        },
-      });
-    } catch (error) {
-      const details = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Unable to persist app log: ${details}`);
-    }
-  }
-
-  async getLogsForUser(userId: string) {
-    const logs = await this.prisma.appLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    });
-
-    return logs
-      .filter((log) => {
-        if (!log.context || typeof log.context !== 'object' || Array.isArray(log.context)) {
-          return false;
-        }
-
-        const contextUserId = (log.context as Record<string, unknown>).userId;
-        return typeof contextUserId === 'string' && contextUserId === userId;
-      })
-      .slice(0, 50);
-  }
-
-
 }
 

@@ -10,5 +10,5 @@ export class CreateAppLogDto {
 
   @IsOptional()
   @IsObject()
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
