@@ -10,6 +10,7 @@ import { OrdersModule } from './orders/orders.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { EngineModule } from './engine/engine.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { UserRegisteredListener } from './events/user-registered.listener';
 
 @Module({
   imports: [
@@ -29,6 +30,9 @@ import { PrismaModule } from './prisma/prisma.module';
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    UserRegisteredListener,
+  ],
 })
 export class AppModule {}
