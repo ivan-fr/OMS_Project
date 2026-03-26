@@ -28,7 +28,9 @@ import { AppLogModule } from './appLog/app-log.module';
         port: Number.parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
-    EventEmitterModule.forRoot(),
+    EventEmitterModule.forRoot({
+      wildcard: true,
+    }),
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],

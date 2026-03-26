@@ -4,7 +4,6 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { BusinessEventDto } from '../events/business-event.dto';
 import { BusinessEventPayloadDto } from '../events/business-event-payload.dto';
 import {
-  ActionType,
   Prisma,
   TriggerType,
   Workflow,
@@ -199,7 +198,7 @@ export class EngineService {
     const actionExecution =
       await this.workflowExecutionsRepository.createActionExecution(
         workflowExecutionId,
-        action.type as ActionType,
+        action.type,
       );
 
     this.logger.log(`Starting action: ${action.type}`);
