@@ -13,7 +13,7 @@ describe('ActionExecutorService', () => {
       notifyAdminHandler as any,
       { type: ActionType.NOTIFY_USER, execute: jest.fn() } as any,
       { type: ActionType.CREATE_LOG, execute: jest.fn() } as any,
-      { type: ActionType.CREATE_TASK, execute: jest.fn() } as any,
+      { type: ActionType.CREATE_TASK_DB, execute: jest.fn() } as any,
       { type: ActionType.UPDATE_STATUS, execute: jest.fn() } as any,
     );
 
@@ -38,7 +38,7 @@ describe('ActionExecutorService', () => {
       { type: ActionType.NOTIFY_ADMIN, execute: jest.fn() } as any,
       { type: ActionType.NOTIFY_USER, execute: jest.fn() } as any,
       { type: ActionType.CREATE_LOG, execute: jest.fn() } as any,
-      { type: ActionType.CREATE_TASK, execute: jest.fn() } as any,
+      { type: ActionType.CREATE_TASK_DB, execute: jest.fn() } as any,
       { type: ActionType.UPDATE_STATUS, execute: jest.fn() } as any,
     );
 
@@ -67,7 +67,7 @@ describe('ActionExecutorService', () => {
       { type: ActionType.NOTIFY_ADMIN, execute: jest.fn() } as any,
       notifyUserHandler as any,
       { type: ActionType.CREATE_LOG, execute: jest.fn() } as any,
-      { type: ActionType.CREATE_TASK, execute: jest.fn() } as any,
+      { type: ActionType.CREATE_TASK_DB, execute: jest.fn() } as any,
       { type: ActionType.UPDATE_STATUS, execute: jest.fn() } as any,
     );
 

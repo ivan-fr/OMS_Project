@@ -6,7 +6,7 @@ import { ActionExecutionContext } from '../action-context.type';
 
 @Injectable()
 export class CreateTaskHandler implements ActionHandler {
-  readonly type = ActionType.CREATE_TASK;
+  readonly type = ActionType.CREATE_TASK_DB;
 
   constructor(private readonly prisma: PrismaService) {}
 
