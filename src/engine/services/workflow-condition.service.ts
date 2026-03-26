@@ -127,10 +127,21 @@ export class WorkflowConditionService {
 
     let current: unknown = source;
     for (const segment of segments) {
-      if (current === null || typeof current !== 'object' || !(segment in current)) {
+      // Bloque explicitement les segments dangereux pour éviter tout accès inattendu.
+      if (segment === '__proto__' || segment === 'prototype' || segment === 'constructor') {
         return undefined;
       }
-      current = (current as Record<string, unknown>)[segment];
+
+      if (current === null || typeof current !== 'object') {
+        return undefined;
+      }
+
+      const obj = current as Record<string, unknown>;
+      if (!Object.prototype.hasOwnProperty.call(obj, segment)) {
+        return undefined;
+      }
+
+      current = obj[segment];
     }
 
     return current;
