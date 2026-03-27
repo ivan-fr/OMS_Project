@@ -16,8 +16,7 @@ export class UpdateStatusHandler implements ActionHandler {
       throw new BadRequestException('orderId is required for UPDATE_STATUS');
     }
 
-    const rawConfig = (context.action.config ?? {}) as { newStatus?: string };
-    const newStatus = rawConfig.newStatus ?? 'processing';
+    const newStatus = context.payload.status ?? 'processing';
 
     await this.ordersRepository.updateStatus(context.payload.orderId, newStatus);
 

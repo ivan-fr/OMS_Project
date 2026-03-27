@@ -62,7 +62,6 @@ export class WorkflowsRepository {
           deleteMany: {},
           create: body.map((actionDto) => ({
             type: actionDto.type,
-            config: actionDto.config,
             order: actionDto.order,
           })),
         },

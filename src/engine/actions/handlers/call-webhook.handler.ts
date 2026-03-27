@@ -12,11 +12,10 @@ export class CallWebhookHandler implements ActionHandler {
   constructor(private readonly appLogHelper: AppLogHelperService) {}
 
   async execute(context: ActionExecutionContext): Promise<string> {
-    const config = context.action.config as Record<string, unknown> | null;
-    const url = config?.url as string | undefined;
+    const url = context.payload.url as string | undefined;
 
     if (!url) {
-      throw new Error('Missing "url" in action config');
+      throw new Error('Missing "url" in action event payload for CALL_WEBHOOK action');
     }
 
     const body = {

@@ -58,7 +58,6 @@ model WorkflowAction {
   workflow   Workflow @relation(fields: [workflowId], references: [id])
   type       ActionType  /// Type d'action exécutable par le moteur
   order      Int  /// Numéro d'ordre d'exécution (1, 2, 3...). Les actions s'exécutent dans cet ordre
-  config     Json?  /// Configuration JSON optionnelle pour l'action (ex: {"newStatus": "processing"})
 }
 
 /// Exécution d'un workflow

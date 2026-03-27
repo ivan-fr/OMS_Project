@@ -25,7 +25,6 @@ describe('ActionExecutorService', () => {
         workflowId: 'wf1',
         type: ActionType.NOTIFY_ADMIN,
         order: 1,
-        config: null,
       } as any,
       { userId: 'u1' },
     );
@@ -52,7 +51,6 @@ describe('ActionExecutorService', () => {
           workflowId: 'wf1',
           type: 'UNKNOWN_TYPE',
           order: 1,
-          config: null,
         } as any,
         { userId: 'u1' },
       ),
@@ -77,7 +75,6 @@ describe('ActionExecutorService', () => {
     const result = await service.executeStandaloneAction(
       ActionType.NOTIFY_USER,
       { userId: 'u1' },
-      { any: 'config' },
     );
 
     expect(notifyUserHandler.execute).toHaveBeenCalled();

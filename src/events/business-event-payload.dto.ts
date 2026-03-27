@@ -15,4 +15,7 @@ export class BusinessEventPayloadDto {
 
   @ApiPropertyOptional({ example: 'created' })
   status?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/webhook' })
+  url?: string;
 }

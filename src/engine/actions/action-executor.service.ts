@@ -55,7 +55,6 @@ export class ActionExecutorService {
   async executeStandaloneAction(
     actionType: ActionType,
     payload: BusinessEventPayloadDto,
-    config?: unknown,
   ): Promise<string> {
     const handler = this.resolveHandler(actionType);
 
@@ -65,7 +64,6 @@ export class ActionExecutorService {
       workflowId: 'standalone-workflow',
       type: actionType,
       order: 0,
-      config: (config ?? null) as WorkflowAction['config'],
     } as WorkflowAction & { type: ActionType };
 
     return handler.execute({
