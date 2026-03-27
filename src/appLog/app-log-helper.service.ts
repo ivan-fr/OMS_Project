@@ -30,26 +30,11 @@ export class AppLogHelperService {
     }
   }
 
-  async getLogsForUser(userId: string) {
-    const logs = await this.prisma.appLog.findMany({
+  async getLatestLogs() {
+    return this.prisma.appLog.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      take: 100,
     });
-
-    return logs
-      .filter((log) => {
-        if (
-          !log.context ||
-          typeof log.context !== 'object' ||
-          Array.isArray(log.context)
-        ) {
-          return false;
-        }
-
-        const contextUserId = (log.context as Record<string, unknown>).userId;
-        return typeof contextUserId === 'string' && contextUserId === userId;
-      })
-      .slice(0, 50);
   }
 
   async info(message: string, context?: Record<string, unknown>) {

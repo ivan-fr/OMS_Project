@@ -11,8 +11,8 @@ export class LogsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lister les logs applicatifs de l’utilisateur connecté' })
+  @ApiOperation({ summary: 'Lister les 100 derniers logs applicatifs' })
   async getLogs(@Req() req: { user: { sub: string } }) {
-    return this.appLogHelper.getLogsForUser(req.user.sub);
+    return this.appLogHelper.getLatestLogs();
   }
 }
